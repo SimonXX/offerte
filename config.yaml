@@ -28,6 +28,11 @@ regole:
     prezzo_max: 60
     canali: [informatica]            # nomi di canale o di cartella; assente = tutti
     notify: true
+  - nome: apple-watch-sotto-250
+    parole: ["apple watch", '/\bwatch\s*(se|series|ultra)\b/']
+    escludi: [cinturino, cinturini, cover, pellicola, vetro, caricatore, cavo, supporto, custodia]
+    prezzo_max: 250
+    notify: true
   - nome: errori-di-prezzo
     parole: ["errore di prezzo", '/sconto:?\s*[7-9]\d\s?%/']
     canali: [erroridiprezzo, erroridiprezzo_offertedalweb]

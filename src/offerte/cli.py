@@ -11,12 +11,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import __version__
-from .config import Config, ConfigError, load_config
+from .config import Config, ConfigError, Rule, compile_keyword, load_config
 from .feeds import fmt_price
 from .fetch import run_fetch
 from .http import Client
 from .log import setup_logging
 from .notify import Notifier, load_env
+from .rules import matches
 from .serve import serve
 from .store import Store
 
@@ -45,6 +46,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("stats", help="offerte al giorno per canale e regole scattate")
     p.add_argument("--giorni", type=int, default=7)
+
+    p = sub.add_parser("filtra", help="prova una regola al volo sulle offerte salvate, senza toccare la config")
+    p.add_argument("parole", nargs="+", help="parole chiave (parola intera o /regex/), come in config")
+    p.add_argument("--prezzo-max", type=float)
+    p.add_argument("--prezzo-min", type=float)
+    p.add_argument("--escludi", nargs="*", default=[], help="parole che annullano la corrispondenza")
+    p.add_argument("--tutte", action="store_true", help="servono tutte le parole, non una sola")
+    p.add_argument("--canali", nargs="*", default=[], help="nomi di canale o di cartella")
+    p.add_argument("--giorni", type=int, default=14)
+    p.add_argument("--limite", type=int, default=50)
     return parser
 
 
@@ -87,10 +98,7 @@ def cmd_search(args: argparse.Namespace, config: Config) -> int:
     if not rows:
         print("nessuna offerta trovata")
         return 0
-    for o in rows:
-        prezzo = fmt_price(o.price) if o.price is not None else "-"
-        titolo = o.title or o.text.splitlines()[0][:60]
-        print(f"{_local(o.posted_at)}  {prezzo:>10}  {titolo}  [{', '.join(o.channels)}]  {o.link or o.permalink}")
+    _print_offers(rows)
     return 0
 
 
@@ -120,7 +128,37 @@ def cmd_stats(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
-COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats": cmd_stats}
+def _print_offers(rows) -> None:
+    for o in rows:
+        prezzo = fmt_price(o.price) if o.price is not None else "-"
+        titolo = o.title or o.text.splitlines()[0][:60]
+        print(f"{_local(o.posted_at)}  {prezzo:>10}  {titolo}  [{', '.join(o.channels)}]  {o.link or o.permalink}")
+
+
+def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
+    cartelle = {k.lower(): v for k, v in config.cartelle().items()}
+    canali: set[str] = set()
+    for voce in args.canali:
+        voce = voce.lower().lstrip("@")
+        canali |= set(cartelle.get(voce, [voce]))
+    try:
+        rule = Rule(nome="filtra", parole=tuple(compile_keyword(p) for p in args.parole),
+                    prezzo_max=args.prezzo_max, prezzo_min=args.prezzo_min, canali=frozenset(canali),
+                    tutte=args.tutte, escludi=tuple(compile_keyword(p) for p in args.escludi))
+    except Exception as e:  # noqa: BLE001 (re.error e simili: messaggio all'utente, non traceback)
+        print(f"regola non valida: {e}", file=sys.stderr)
+        return 2
+    since = (datetime.now(timezone.utc) - timedelta(days=args.giorni)).isoformat(timespec="seconds")
+    with Store(config.parametri.var_dir / "offerte.sqlite") as store:
+        rows = [o for o in store.offers_since(since) if matches(rule, o)][: args.limite]
+    if not rows:
+        print("nessuna offerta corrisponde")
+        return 0
+    _print_offers(rows)
+    return 0
+
+
+COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats": cmd_stats, "filtra": cmd_filtra}
 
 
 def main(argv: list[str] | None = None) -> int:

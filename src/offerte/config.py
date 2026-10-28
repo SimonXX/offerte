@@ -29,6 +29,9 @@ class Rule:
     prezzo_max: float | None = None
     canali: frozenset[str] = frozenset()  # vuoto = tutti i canali
     notify: bool = False
+    tutte: bool = False  # True: servono tutte le parole, non una sola
+    escludi: tuple[re.Pattern[str], ...] = ()  # una sola di queste nel testo e la regola non scatta
+    prezzo_min: float | None = None
 
 
 @dataclass(frozen=True)
@@ -134,16 +137,18 @@ def load_config(path: Path | str) -> Config:
     for i, rr in enumerate(data.get("regole") or []):
         if not isinstance(rr, dict) or not rr.get("nome"):
             raise ConfigError(f"regole[{i}]: serve almeno 'nome'")
-        _check_keys(f"regole[{i}]", rr, {"nome", "parole", "prezzo_max", "canali", "notify"})
+        _check_keys(f"regole[{i}]", rr, {"nome", "parole", "prezzo_max", "prezzo_min", "canali", "notify", "tutte", "escludi"})
         nome = str(rr["nome"]).strip()
         parole = [str(p) for p in _as_list(rr.get("parole"))]
         if not parole:
             raise ConfigError(f"regola '{nome}': nessuna parola chiave")
         try:
             compiled = tuple(compile_keyword(p) for p in parole)
+            escludi = tuple(compile_keyword(str(p)) for p in _as_list(rr.get("escludi")))
         except re.error as e:
             raise ConfigError(f"regola '{nome}': regex non valida ({e})") from None
         prezzo_max = rr.get("prezzo_max")
+        prezzo_min = rr.get("prezzo_min")
         selezione: set[str] = set()
         for voce in _as_list(rr.get("canali")):
             voce = str(voce).strip().lstrip("@").lower()
@@ -159,6 +164,9 @@ def load_config(path: Path | str) -> Config:
             prezzo_max=None if prezzo_max is None else float(prezzo_max),
             canali=frozenset(selezione),
             notify=bool(rr.get("notify", False)),
+            tutte=bool(rr.get("tutte", False)),
+            escludi=escludi,
+            prezzo_min=None if prezzo_min is None else float(prezzo_min),
         ))
     if len({r.nome for r in regole}) != len(regole):
         raise ConfigError("regole con lo stesso nome")

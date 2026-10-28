@@ -179,6 +179,10 @@ class Store:
             " WHERE m.rule = ? AND o.posted_at >= ? ORDER BY o.posted_at DESC LIMIT ?", (rule, since, limit)).fetchall()
         return [_offer(r) for r in rows]
 
+    def offers_since(self, since: str) -> list[Offer]:
+        rows = self.db.execute("SELECT * FROM offers WHERE posted_at >= ? ORDER BY posted_at DESC", (since,)).fetchall()
+        return [_offer(r) for r in rows]
+
     def unmatched_offers(self, rule: str, since: str) -> list[Offer]:
         rows = self.db.execute(
             "SELECT o.* FROM offers o WHERE o.first_seen >= ? AND NOT EXISTS"

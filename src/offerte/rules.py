@@ -11,7 +11,12 @@ def matches(rule: Rule, offer: Offer) -> bool:
         return False
     if rule.prezzo_max is not None and (offer.price is None or offer.price > rule.prezzo_max):
         return False
-    return any(p.search(offer.text) for p in rule.parole)
+    if rule.prezzo_min is not None and (offer.price is None or offer.price < rule.prezzo_min):
+        return False
+    if any(p.search(offer.text) for p in rule.escludi):
+        return False
+    hits = (p.search(offer.text) is not None for p in rule.parole)
+    return all(hits) if rule.tutte else any(hits)
 
 
 def apply_rules(store: Store, rules: tuple[Rule, ...], *, since: str, now: str) -> dict[int, list[Rule]]:

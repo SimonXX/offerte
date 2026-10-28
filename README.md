@@ -28,7 +28,7 @@ poi in `./config.yaml`; i percorsi relativi nella config partono dalla cartella 
 
 ## Configurazione
 
-`config.yaml` con tre canali e due regole:
+`config.yaml` con tre canali e tre regole:
 
 ```yaml
 parametri:
@@ -59,15 +59,22 @@ regole:
     prezzo_max: 60
     canali: [informatica]
     notify: true
+  - nome: apple-watch-sotto-250
+    parole: ["apple watch", '/\bwatch\s*(se|series|ultra)\b/']
+    escludi: [cinturino, cinturini, cover, pellicola, vetro, caricatore, cavo, supporto, custodia]
+    prezzo_max: 250
+    notify: true
   - nome: errori-di-prezzo
     parole: ["errore di prezzo", '/sconto:?\s*[7-9]\d\s?%/']
     canali: [erroridiprezzo, erroridiprezzo_offertedalweb]
     notify: false
 ```
 
-Una regola scatta se almeno una parola compare nel testo. Una parola semplice è cercata come parola intera, senza
-distinzione di maiuscole; una voce fra barre (`'/…/'`) è una regex Python, sempre case-insensitive. `prezzo_max` si
-applica al prezzo attuale estratto: un'offerta senza prezzo non passa. `canali` accetta nomi di canale o di cartella;
+Una regola scatta se almeno una parola compare nel testo (con `tutte: true` devono comparire tutte). Una parola
+semplice è cercata come parola intera, senza distinzione di maiuscole; una voce fra barre (`'/…/'`) è una regex
+Python, sempre case-insensitive. `escludi` elenca parole che annullano la corrispondenza: è il modo per tenere fuori
+cinturini e cover quando si cerca un Apple Watch. `prezzo_max` e `prezzo_min` si applicano al prezzo attuale
+estratto: un'offerta senza prezzo non passa un filtro di prezzo. `canali` accetta nomi di canale o di cartella;
 assente, la regola vale per tutti. Le regole si valutano a ogni giro sulle offerte della finestra `feed_giorni`, quindi
 una regola nuova popola subito il proprio feed con il pregresso; le notifiche partono solo per le offerte nuove del giro.
 
@@ -79,7 +86,9 @@ una regola nuova popola subito il proprio feed con il pregresso; le notifiche pa
 | `offerte serve [--host H] [--port P]` | serve `var/feeds/` via HTTP (default `127.0.0.1:8099`) |
 | `offerte search <parola> [--limite N]` | cerca nel testo e nel titolo delle offerte salvate |
 | `offerte stats [--giorni N]` | offerte al giorno per canale e regole scattate |
+| `offerte filtra <parole…> [--prezzo-max X] [--prezzo-min X] [--escludi …] [--tutte] [--canali …]` | prova una regola al volo sulle offerte salvate, per tararla prima di metterla in config |
 
+Esempio: `offerte filtra "apple watch" --prezzo-max 250 --escludi cinturino cover`.
 Opzioni globali: `--config`, `-v` (debug), `--version`. Due `fetch` non girano insieme (lock su `var/fetch.lock`).
 Il log va su stderr e su `var/offerte.log` (rotazione a 2 MB, cinque copie).
 

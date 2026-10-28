@@ -58,3 +58,30 @@ def test_config_regex_non_valida(tmp_path):
     (tmp_path / "config.yaml").write_text("canali: [{nome: a}]\nregole: [{nome: r, parole: ['/(/']}]\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="regex non valida"):
         load_config(tmp_path / "config.yaml")
+
+
+def test_tutte_le_parole():
+    r = rule("apple", "watch", tutte=True)
+    assert matches(r, offer("Apple Watch SE 2024"))
+    assert not matches(r, offer("Apple AirPods Pro"))
+
+
+def test_escludi():
+    r = Rule(nome="r", parole=(compile_keyword("apple watch"),), escludi=(compile_keyword("cinturino"), compile_keyword("cover")))
+    assert matches(r, offer("Apple Watch SE 40mm", 199.0))
+    assert not matches(r, offer("Cinturino per Apple Watch 44mm", 9.99))
+
+
+def test_prezzo_minimo():
+    r = rule("apple watch", prezzo_min=100)
+    assert matches(r, offer("apple watch", 199.0))
+    assert not matches(r, offer("apple watch", 9.99))  # accessorio travestito
+    assert not matches(r, offer("apple watch", None))
+
+
+def test_config_regola_completa(tmp_path):
+    (tmp_path / "config.yaml").write_text(
+        "canali: [{nome: a}]\nregole:\n  - {nome: aw, parole: ['apple watch'], escludi: [cinturino], prezzo_max: 250, prezzo_min: 80, tutte: true}\n",
+        encoding="utf-8")
+    r = load_config(tmp_path / "config.yaml").regole[0]
+    assert (r.prezzo_max, r.prezzo_min, r.tutte, len(r.escludi)) == (250.0, 80.0, True, 1)
