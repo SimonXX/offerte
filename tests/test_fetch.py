@@ -76,7 +76,8 @@ def test_giro_completo(ambiente):
 
         assert s.ok == ["canale_test"] and s.skipped == ["privato"] and list(s.failed) == ["rotto"]
         assert s.new_posts == 6 and len(s.new_offers) == 6
-        assert store.channel_state("canale_test") == (106, True)
+        stato = store.channel_state("canale_test")
+        assert (stato.last_id, stato.bootstrapped) == (106, True)
 
         per_msg = {o.permalink.rsplit("/", 1)[1]: o for o in store.offers_for_channels(["canale_test"], "2026-01-01", 100)}
         assert per_msg["102"].link == "https://www.amazon.it/dp/B08GLX7TNT?tag=canale-21"  # shortener risolto e ripulito

@@ -20,14 +20,18 @@ IMAGE_SELECTORS = (
 
 @dataclass
 class Message:
-    channel: str
-    id: int
+    """Messaggio grezzo di qualunque fonte: Telegram, feed, pagina HTML, script esterno, actor Apify."""
+
+    channel: str  # nome della fonte in config
+    id: int | str
     date: datetime
     text: str
     struck: list[str]  # testi barrati (<s>), di solito il prezzo pieno
     links: list[str]  # in ordine di preferenza: pulsanti, link nel testo, anteprima
     image: str | None
     permalink: str
+    price: float | None = None  # se la fonte lo conosce già; altrimenti si estrae dal testo
+    old_price: float | None = None
 
 
 @dataclass
@@ -101,6 +105,17 @@ def _parse_message(node: Node, channel: str, msg_id: int) -> Message | None:
         image=image,
         permalink=f"https://t.me/{channel}/{msg_id}",
     )
+
+
+def fragment(html: str) -> tuple[str, list[str], list[str], str | None]:
+    """Testo, link, testi barrati e prima immagine di un frammento HTML (descrizioni RSS, celle di pagine)."""
+    tree = HTMLParser(BR_RE.sub("\n", html or ""))
+    body = tree.body or tree.root
+    text = _clean_text(body.text(deep=True)) if body is not None else ""
+    links = [a.attributes["href"] for a in tree.css("a[href]") if a.attributes.get("href")]
+    struck = [s.text(deep=True).strip() for tag in ("s", "strike", "del") for s in tree.css(tag)]
+    img = tree.css_first("img[src]")
+    return text, links, struck, (img.attributes.get("src") if img else None)
 
 
 def _clean_text(raw: str) -> str:

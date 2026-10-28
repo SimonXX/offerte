@@ -53,8 +53,13 @@ def item_html(o: Offer) -> str:
     if dettagli:
         parts.append("<p>" + " · ".join(dettagli) + "</p>")
     parts.append(f"<p>Canali: {e(', '.join(o.channels))}</p>")
-    link = f'<a href="{e(o.link)}">Vai all\'offerta</a> · ' if o.link else ""
-    parts.append(f'<p>{link}<a href="{e(o.permalink)}">Messaggio originale</a></p>')
+    voci = []
+    if o.link:
+        voci.append(f'<a href="{e(o.link)}">Vai all\'offerta</a>')
+    if o.permalink and o.permalink != o.link:
+        voci.append(f'<a href="{e(o.permalink)}">Messaggio originale</a>')
+    if voci:
+        parts.append("<p>" + " · ".join(voci) + "</p>")
     return "\n".join(parts)
 
 

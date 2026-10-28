@@ -19,7 +19,8 @@ from .log import setup_logging
 from .notify import Notifier, load_env
 from .rules import matches
 from .serve import serve
-from .store import Store
+from .sources.base import FetchContext
+from .store import SourceState, Store
 
 log = logging.getLogger("offerte.cli")
 
@@ -32,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("fetch", help="scarica i canali, aggiorna il database, applica le regole, rigenera i feed")
-    p.add_argument("--canale", help="solo questo canale")
+    p.add_argument("--fonte", "--canale", dest="fonte", help="solo questa fonte")
     p.add_argument("--storico", type=int, metavar="N", help="pagine da leggere per canale (sovrascrive pagine_storico)")
     p.add_argument("--senza-notifiche", action="store_true", help="non inviare notifiche Telegram in questo giro")
 
@@ -46,6 +47,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("stats", help="offerte al giorno per canale e regole scattate")
     p.add_argument("--giorni", type=int, default=7)
+
+    sub.add_parser("fonti", help="elenca le fonti configurate con stato e ultimo fetch")
+
+    p = sub.add_parser("prova", help="esegue una fonte senza salvare nulla e mostra cosa produce")
+    p.add_argument("fonte")
+    p.add_argument("--limite", type=int, default=20)
 
     p = sub.add_parser("filtra", help="prova una regola al volo sulle offerte salvate, senza toccare la config")
     p.add_argument("parole", nargs="+", help="parole chiave (parola intera o /regex/), come in config")
@@ -61,8 +68,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def cmd_fetch(args: argparse.Namespace, config: Config) -> int:
     p = config.parametri
-    if args.canale and args.canale not in {c.nome for c in config.canali_attivi()}:
-        log.error("canale '%s' non in config o non attivo", args.canale)
+    if args.fonte and args.fonte not in {f.nome for f in config.fonti_attive()}:
+        log.error("fonte '%s' non in config o non attiva", args.fonte)
         return 2
     with open(p.var_dir / "fetch.lock", "w") as lock:
         try:
@@ -75,7 +82,7 @@ def cmd_fetch(args: argparse.Namespace, config: Config) -> int:
             log.warning("TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID assenti: notifiche disattivate")
         try:
             with Store(p.var_dir / "offerte.sqlite") as store, Client(p.user_agent, p.intervallo_cortesia) as client:
-                summary = run_fetch(config, store, client, notifier, only=args.canale, pages=args.storico)
+                summary = run_fetch(config, store, client, notifier, only=args.fonte, pages=args.storico)
         finally:
             if notifier:
                 notifier.close()
@@ -110,7 +117,7 @@ def cmd_stats(args: argparse.Namespace, config: Config) -> int:
     with Store(config.parametri.var_dir / "offerte.sqlite") as store:
         per_day, fired, totali = store.posts_per_day(since), store.rules_fired(since), store.counts()
 
-    tabella: dict[str, dict[str, int]] = {c.nome: {} for c in config.canali_attivi()}
+    tabella: dict[str, dict[str, int]] = {f.nome: {} for f in config.fonti_attive()}
     for channel, day, n in per_day:
         tabella.setdefault(channel, {})[day] = n
     print(f"Offerte al giorno per canale (ultimi {giorni} giorni)")
@@ -133,6 +140,38 @@ def _print_offers(rows) -> None:
         prezzo = fmt_price(o.price) if o.price is not None else "-"
         titolo = o.title or o.text.splitlines()[0][:60]
         print(f"{_local(o.posted_at)}  {prezzo:>10}  {titolo}  [{', '.join(o.channels)}]  {o.link or o.permalink}")
+
+
+def cmd_fonti(args: argparse.Namespace, config: Config) -> int:
+    with Store(config.parametri.var_dir / "offerte.sqlite") as store:
+        print(f"{'fonte':<32}{'tipo':<10}{'cartella':<14}{'ogni':>5}  {'ultimo fetch':<17}{'stato':<12}errore")
+        for f in config.fonti:
+            st = store.channel_state(f.nome)
+            quando = _local(st.last_fetch) if st.last_fetch else "-"
+            stato = st.last_status or ("inattiva" if not f.attivo else "-")
+            print(f"{f.nome:<32}{f.tipo:<10}{f.cartella:<14}{f.ogni or '':>5}  {quando:<17}{stato:<12}{(st.last_error or '')[:60]}")
+    return 0
+
+
+def cmd_prova(args: argparse.Namespace, config: Config) -> int:
+    fonte = next((f for f in config.fonti if f.nome == args.fonte), None)
+    if fonte is None:
+        print(f"fonte '{args.fonte}' non in config", file=sys.stderr)
+        return 2
+    p = config.parametri
+    with Store(":memory:") as store, Client(p.user_agent, p.intervallo_cortesia) as client:
+        ctx = FetchContext(client=client, store=store, now=datetime.now(timezone.utc), state=SourceState(),
+                           pages=1, config_dir=config.path.parent)
+        try:
+            result = fonte.fetch(ctx)
+        except Exception as e:  # noqa: BLE001 (è un comando diagnostico: l'errore è il risultato)
+            print(f"errore: {type(e).__name__}: {e}", file=sys.stderr)
+            return 1
+    print(f"{len(result.items)} elementi" + (f", id massimo {result.last_id}" if result.last_id else ""))
+    for m in result.items[: args.limite]:
+        prezzo = f"{m.price}" if m.price is not None else "-"
+        print(f"- {m.date:%Y-%m-%d %H:%M}  id={m.id}  prezzo={prezzo}  {m.text.splitlines()[0][:70]}  {m.links[0] if m.links else ''}")
+    return 0
 
 
 def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
@@ -158,7 +197,8 @@ def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
-COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats": cmd_stats, "filtra": cmd_filtra}
+COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats": cmd_stats, "filtra": cmd_filtra,
+            "fonti": cmd_fonti, "prova": cmd_prova}
 
 
 def main(argv: list[str] | None = None) -> int:

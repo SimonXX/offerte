@@ -83,6 +83,15 @@ class Offer:
     n_posts: int
 
 
+@dataclass
+class SourceState:
+    last_id: int = 0
+    bootstrapped: bool = False
+    last_fetch: str | None = None
+    last_status: str | None = None
+    last_error: str | None = None
+
+
 def _offer(row: sqlite3.Row) -> Offer:
     d = dict(row)
     d["channels"] = json.loads(d["channels"])
@@ -110,9 +119,11 @@ class Store:
 
     # --- canali -------------------------------------------------------------
 
-    def channel_state(self, name: str) -> tuple[int, bool]:
-        row = self.db.execute("SELECT last_id, bootstrapped FROM channels WHERE name = ?", (name,)).fetchone()
-        return (row["last_id"], bool(row["bootstrapped"])) if row else (0, False)
+    def channel_state(self, name: str) -> SourceState:
+        row = self.db.execute("SELECT * FROM channels WHERE name = ?", (name,)).fetchone()
+        if not row:
+            return SourceState()
+        return SourceState(row["last_id"], bool(row["bootstrapped"]), row["last_fetch"], row["last_status"], row["last_error"])
 
     def update_channel(self, name: str, *, status: str, now: str, error: str | None = None,
                        last_id: int | None = None, bootstrapped: bool | None = None) -> None:

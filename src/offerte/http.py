@@ -42,6 +42,11 @@ class Client:
         self._clock = clock
         self._last: float | None = None
 
+    @property
+    def http(self) -> httpx.Client:
+        """Il client httpx sottostante, per le fonti che parlano con altre API (Apify e simili)."""
+        return self._client
+
     def close(self) -> None:
         self._client.close()
 

@@ -5,21 +5,18 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
+
+if TYPE_CHECKING:
+    from .sources.base import Source
 
 DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) offerte/0.1"
 
 
 class ConfigError(Exception):
     pass
-
-
-@dataclass(frozen=True)
-class Channel:
-    nome: str
-    cartella: str
-    attivo: bool = True
 
 
 @dataclass(frozen=True)
@@ -52,18 +49,18 @@ class Params:
 @dataclass(frozen=True)
 class Config:
     path: Path
-    canali: tuple[Channel, ...]
+    fonti: tuple["Source", ...]
     regole: tuple[Rule, ...]
     parametri: Params
 
-    def canali_attivi(self) -> list[Channel]:
-        return [c for c in self.canali if c.attivo]
+    def fonti_attive(self) -> list["Source"]:
+        return [f for f in self.fonti if f.attivo]
 
     def cartelle(self) -> dict[str, list[str]]:
-        """Cartella -> nomi dei canali attivi che vi appartengono."""
+        """Cartella -> nomi delle fonti attive che vi appartengono."""
         out: dict[str, list[str]] = {}
-        for c in self.canali_attivi():
-            out.setdefault(c.cartella, []).append(c.nome)
+        for f in self.fonti_attive():
+            out.setdefault(f.cartella, []).append(f.nome)
         return out
 
 
@@ -96,8 +93,6 @@ def load_config(path: Path | str) -> Config:
         raise ConfigError(f"YAML non valido in {path}: {e}") from None
     if not isinstance(data, dict):
         raise ConfigError("la config deve essere una mappa YAML")
-    _check_keys("config", data, {"canali", "regole", "parametri"})
-
     raw = data.get("parametri") or {}
     _check_keys("parametri", raw, set(Params.__dataclass_fields__))
     var_dir = Path(raw.get("var_dir") or "var")
@@ -117,21 +112,27 @@ def load_config(path: Path | str) -> Config:
         http_port=int(raw.get("http_port", 8099)),
     )
 
-    canali: list[Channel] = []
-    for i, rc in enumerate(data.get("canali") or []):
+    _check_keys("config", data, {"canali", "fonti", "regole", "parametri"})
+    from .sources import crea_fonte  # import ritardato: sources importa ConfigError da qui
+
+    fonti = []
+    for i, rc in enumerate(data.get("canali") or []):  # scorciatoia: canali = fonti di tipo telegram
         if not isinstance(rc, dict) or not rc.get("nome"):
             raise ConfigError(f"canali[{i}]: serve almeno 'nome'")
         _check_keys(f"canali[{i}]", rc, {"nome", "cartella", "attivo"})
-        nome = str(rc["nome"]).strip().lstrip("@").lower()
-        canali.append(Channel(nome, str(rc.get("cartella") or "varie").strip(), bool(rc.get("attivo", True))))
-    if not canali:
-        raise ConfigError("nessun canale configurato")
-    nomi = {c.nome for c in canali}
-    if len(nomi) != len(canali):
-        raise ConfigError("canali duplicati")
+        fonti.append(crea_fonte({**rc, "nome": str(rc["nome"]).strip().lstrip("@").lower(), "tipo": "telegram"}))
+    for i, rf in enumerate(data.get("fonti") or []):
+        if not isinstance(rf, dict):
+            raise ConfigError(f"fonti[{i}]: deve essere una mappa")
+        fonti.append(crea_fonte(rf))
+    if not fonti:
+        raise ConfigError("nessuna fonte configurata (canali: o fonti:)")
+    nomi = {f.nome for f in fonti}
+    if len(nomi) != len(fonti):
+        raise ConfigError("fonti con lo stesso nome")
     per_cartella: dict[str, set[str]] = {}
-    for c in canali:
-        per_cartella.setdefault(c.cartella.lower(), set()).add(c.nome)
+    for f in fonti:
+        per_cartella.setdefault(f.cartella.lower(), set()).add(f.nome)
 
     regole: list[Rule] = []
     for i, rr in enumerate(data.get("regole") or []):
@@ -157,7 +158,7 @@ def load_config(path: Path | str) -> Config:
             elif voce in per_cartella:
                 selezione |= per_cartella[voce]
             else:
-                raise ConfigError(f"regola '{nome}': canale o cartella sconosciuta '{voce}'")
+                raise ConfigError(f"regola '{nome}': fonte o cartella sconosciuta '{voce}'")
         regole.append(Rule(
             nome=nome,
             parole=compiled,
@@ -171,4 +172,4 @@ def load_config(path: Path | str) -> Config:
     if len({r.nome for r in regole}) != len(regole):
         raise ConfigError("regole con lo stesso nome")
 
-    return Config(path=path, canali=tuple(canali), regole=tuple(regole), parametri=params)
+    return Config(path=path, fonti=tuple(fonti), regole=tuple(regole), parametri=params)

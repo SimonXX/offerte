@@ -22,6 +22,34 @@ canali:
     cartella: informatica
     attivo: true
 
+# Fonti diverse da Telegram (tipi: rss, html, comando, apify, oppure una classe esterna "modulo:Classe").
+# Decommenta e adatta. `ogni` = minuti fra una lettura e l'altra (obbligatorio per apify).
+fonti: []
+#  - nome: rsshub-canale
+#    tipo: rss
+#    cartella: informatica
+#    url: http://127.0.0.1:1200/telegram/channel/offertetecnologia
+#    ogni: 30
+#  - nome: pagina-offerte
+#    tipo: html
+#    cartella: casa
+#    url: https://www.esempio.it/offerte
+#    elemento: "div.offerta"
+#    campi: {titolo: "h3", link: "a@href", prezzo: ".prezzo", prezzo_barrato: ".listino", immagine: "img@src"}
+#    ogni: 60
+#  - nome: mio-scraper
+#    tipo: comando
+#    cartella: varie
+#    comando: ["python3", "scripts/mio_scraper.py"]      # stampa record JSON, uno per riga
+#    ogni: 15
+#  - nome: apify-amazon-deals
+#    tipo: apify
+#    cartella: casa
+#    actor: ayeeyee/amazon-deals-scraper
+#    modo: ultimo              # legge l'ultima esecuzione riuscita pianificata su Apify; "sync" la lancia ora
+#    campi: {titolo: title, link: url, prezzo: price, prezzo_barrato: listPrice, immagine: image, id: asin}
+#    ogni: 180                 # token in .env: APIFY_TOKEN
+
 regole:
   - nome: ssd-sotto-60
     parole: ["ssd", "nvme", '/\b[12]\s?tb\b/']   # parola intera, oppure regex fra barre

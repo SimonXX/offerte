@@ -78,11 +78,41 @@ estratto: un'offerta senza prezzo non passa un filtro di prezzo. `canali` accett
 assente, la regola vale per tutti. Le regole si valutano a ogni giro sulle offerte della finestra `feed_giorni`, quindi
 una regola nuova popola subito il proprio feed con il pregresso; le notifiche partono solo per le offerte nuove del giro.
 
+## Fonti
+
+Ogni voce di `canali:` è una fonte Telegram; `fonti:` aggiunge gli altri tipi. Tutte condividono `nome`, `cartella`,
+`attivo` e `ogni` (minuti fra una lettura e la successiva; assente o 0 = a ogni giro). Il resto della pipeline,
+estrazione prezzi, dedupe, regole, feed e notifiche, è lo stesso per tutte.
+
+| tipo | opzioni | cosa fa |
+|:--|:--|:--|
+| `telegram` | `canale` (default: il nome), `pagine` | anteprima pubblica `t.me/s/<canale>`, incrementale per id |
+| `rss` | `url`, `massimo` | RSS 2.0 o Atom; testo, link, immagine e prezzi barrati dalla descrizione |
+| `html` | `url`, `elemento`, `campi`, `massimo` | una pagina, un selettore CSS per ogni offerta, selettori per i campi (`css`, `css@attr`, `@attr`) |
+| `comando` | `comando`, `cwd`, `timeout` | esegue uno script qualsiasi che stampa record JSON (una riga per record o un array) |
+| `apify` | `actor`, `modo`, `input`, `campi`, `token`, `timeout`, `massimo`, `memoria` | actor dello store Apify via REST; `modo: sync` lo lancia, `modo: ultimo` legge l'ultima esecuzione riuscita |
+| `modulo:Classe` | quelle della classe | una sottoclasse di `offerte.sources.base.Source` importabile, o un entry point `offerte.fonti` |
+
+Campi dei record per `comando` e `apify` (accettati in italiano o in inglese): `id`, `titolo`, `testo`, `link`, `links`,
+`immagine`, `prezzo`, `prezzo_barrato`, `data`, `permalink`. Basta `testo` o `titolo`; il resto, se manca, si ricava dal
+testo come per Telegram. Per `apify` la mappatura `campi` traduce i nomi dell'actor, con percorsi puntati e alternative
+(`prezzo: "price.value|price"`); il token sta in `.env` come `APIFY_TOKEN` e `ogni` è obbligatorio per non spendere
+credito a ogni giro. Uno script per `comando`, in qualunque linguaggio, riceve la variabile `OFFERTE_FONTE` e stampa:
+
+```
+{"id": "a1", "titolo": "Robot aspirapolvere", "link": "https://…", "prezzo": "199,00 €", "data": "2026-10-27T10:00:00Z"}
+```
+
+`offerte prova <fonte>` esegue una fonte senza salvare e mostra cosa produce; `offerte fonti` elenca stato e ultimo
+fetch di tutte. Esempi di configurazione per ogni tipo sono commentati in `config.yaml`.
+
 ## Comandi
 
 | comando | cosa fa |
 |:--|:--|
-| `offerte fetch [--canale X] [--storico N] [--senza-notifiche]` | scarica i canali, aggiorna il database, applica le regole, invia le notifiche, rigenera i feed |
+| `offerte fetch [--fonte X] [--storico N] [--senza-notifiche]` | legge le fonti, aggiorna il database, applica le regole, invia le notifiche, rigenera i feed |
+| `offerte fonti` | fonti configurate con tipo, cartella, intervallo, ultimo fetch e stato |
+| `offerte prova <fonte> [--limite N]` | esegue una fonte senza salvare e mostra gli elementi prodotti |
 | `offerte serve [--host H] [--port P]` | serve `var/feeds/` via HTTP (default `127.0.0.1:8099`) |
 | `offerte search <parola> [--limite N]` | cerca nel testo e nel titolo delle offerte salvate |
 | `offerte stats [--giorni N]` | offerte al giorno per canale e regole scattate |
@@ -213,8 +243,8 @@ funziona lo stesso e avvisa nel log che le notifiche sono disattivate.
 
 - Al primo giro di un canale si leggono `pagine_storico` pagine seguendo `?before=<id>`; ai giri successivi si legge
   dalla pagina più recente indietro finché si incontra un id già noto.
-- Un canale che fallisce (429, 5xx dopo quattro tentativi con backoff 2, 4, 8, 16 s, oppure errore di rete) viene
-  registrato e si passa al successivo. Un canale senza anteprima pubblica (t.me/s rimanda a t.me/<canale>) viene
+- Una fonte che fallisce (429, 5xx dopo quattro tentativi con backoff 2, 4, 8, 16 s, errore di rete, script che
+  esce con errore) viene registrata e si passa alla successiva. Un canale senza anteprima pubblica (t.me/s rimanda a t.me/<canale>) viene
   segnalato nel log e saltato.
 - Link dell'offerta: primo fra i pulsanti inline, poi i link nel testo, poi l'anteprima; si scartano i link Telegram e
   quelli a immagini. Gli accorciatori (amzn.to, bit.ly, amzlink.to e simili, o URL con un solo segmento corto) si
@@ -251,10 +281,11 @@ offerte/
 ├── Containerfile
 ├── systemd/                unit, timer e installa.sh
 ├── src/offerte/
-│   ├── cli.py              fetch | serve | search | stats
+│   ├── cli.py              fetch | serve | search | stats | filtra | fonti | prova
 │   ├── config.py           caricamento e validazione di config.yaml
+│   ├── sources/            fonti: base, telegram, rss, html, comando, apify; registro dei tipi
 │   ├── http.py             client httpx: cortesia, backoff, risoluzione redirect
-│   ├── parser.py           HTML di t.me/s -> messaggi
+│   ├── parser.py           HTML di t.me/s -> messaggi; frammenti HTML
 │   ├── extract.py          prezzo, barrato, sconto, coupon, nome prodotto
 │   ├── links.py            scelta del link, pulizia, chiave di dedupe
 │   ├── dedupe.py           chiave URL o hash del testo
