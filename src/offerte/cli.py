@@ -50,6 +50,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("fonti", help="elenca le fonti configurate con stato e ultimo fetch")
 
+    p = sub.add_parser("pulisci", help="elimina le offerte più vecchie di N giorni e compatta il database")
+    p.add_argument("--giorni", type=int, help="default: parametri.giorni_ritenzione")
+
     p = sub.add_parser("prova", help="esegue una fonte senza salvare nulla e mostra cosa produce")
     p.add_argument("fonte")
     p.add_argument("--limite", type=int, default=20)
@@ -142,6 +145,19 @@ def _print_offers(rows) -> None:
         print(f"{_local(o.posted_at)}  {prezzo:>10}  {titolo}  [{', '.join(o.channels)}]  {o.link or o.permalink}")
 
 
+def cmd_pulisci(args: argparse.Namespace, config: Config) -> int:
+    giorni = args.giorni if args.giorni is not None else config.parametri.giorni_ritenzione
+    if giorni <= 0:
+        print("ritenzione disattivata (giorni <= 0)")
+        return 0
+    before = (datetime.now(timezone.utc) - timedelta(days=giorni)).isoformat(timespec="seconds")
+    with Store(config.parametri.var_dir / "offerte.sqlite") as store:
+        tolte = store.purge(before, vacuum=True)
+        totali = store.counts()
+    print(f"tolte {tolte} offerte più vecchie di {giorni} giorni; restano {totali['offers']} offerte e {totali['posts']} post")
+    return 0
+
+
 def cmd_fonti(args: argparse.Namespace, config: Config) -> int:
     with Store(config.parametri.var_dir / "offerte.sqlite") as store:
         print(f"{'fonte':<32}{'tipo':<10}{'cartella':<14}{'ogni':>5}  {'ultimo fetch':<17}{'stato':<12}errore")
@@ -198,7 +214,7 @@ def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
 
 
 COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats": cmd_stats, "filtra": cmd_filtra,
-            "fonti": cmd_fonti, "prova": cmd_prova}
+            "fonti": cmd_fonti, "prova": cmd_prova, "pulisci": cmd_pulisci}
 
 
 def main(argv: list[str] | None = None) -> int:

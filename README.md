@@ -41,6 +41,7 @@ parametri:
   feed_max_elementi: 100
   giorni_dedupe: 7                # la stessa offerta ripubblicata oltre questo intervallo è un'offerta nuova
   notifica_max_ore: 24            # non notifica offerte più vecchie di così
+  giorni_ritenzione: 90           # le offerte più vecchie si eliminano a fine giro (0 = mai)
 
 canali:
   - nome: erroridiprezzo
@@ -112,6 +113,7 @@ fetch di tutte. Esempi di configurazione per ogni tipo sono commentati in `confi
 |:--|:--|
 | `offerte fetch [--fonte X] [--storico N] [--senza-notifiche]` | legge le fonti, aggiorna il database, applica le regole, invia le notifiche, rigenera i feed |
 | `offerte fonti` | fonti configurate con tipo, cartella, intervallo, ultimo fetch e stato |
+| `offerte pulisci [--giorni N]` | elimina le offerte più vecchie di N giorni e compatta il database (a fine `fetch` avviene da sé, senza compattare) |
 | `offerte prova <fonte> [--limite N]` | esegue una fonte senza salvare e mostra gli elementi prodotti |
 | `offerte serve [--host H] [--port P]` | serve `var/feeds/` via HTTP (default `127.0.0.1:8099`) |
 | `offerte search <parola> [--limite N]` | cerca nel testo e nel titolo delle offerte salvate |

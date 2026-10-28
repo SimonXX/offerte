@@ -155,6 +155,10 @@ def run_fetch(config: Config, store: Store, client: Client, notifier: Notifier |
                 store.mark_notified(offer_id, now_s)
                 s.notified += 1
 
+    if p.giorni_ritenzione > 0:
+        tolte = store.purge(iso(now_dt - timedelta(days=p.giorni_ritenzione)))
+        if tolte:
+            log.info("ritenzione: tolte %d offerte più vecchie di %d giorni", tolte, p.giorni_ritenzione)
     s.feeds = write_feeds(store, config, now_dt)
     log.info("fine giro: fonti ok %d, saltate %d, fallite %d; post nuovi %d, offerte nuove %d, regole scattate %s, notifiche %d",
              len(s.ok), len(s.skipped), len(s.failed), s.new_posts, len(s.new_offers), s.matches or "nessuna", s.notified)

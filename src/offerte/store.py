@@ -223,6 +223,22 @@ class Store:
         self.db.execute("INSERT OR REPLACE INTO redirects(url, resolved, resolved_at) VALUES (?,?,?)", (url, resolved, now))
         self.db.commit()
 
+    # --- ritenzione -------------------------------------------------------------
+
+    def purge(self, before: str, *, vacuum: bool = False) -> int:
+        """Elimina offerte (e post, match, notifiche) pubblicate prima di `before` e i redirect vecchi. Torna le offerte tolte."""
+        ids = [r[0] for r in self.db.execute("SELECT id FROM offers WHERE posted_at < ?", (before,)).fetchall()]
+        for chunk in (ids[i:i + 500] for i in range(0, len(ids), 500)):
+            marks = ",".join("?" * len(chunk))
+            for table in ("posts", "matches", "notifications"):
+                self.db.execute(f"DELETE FROM {table} WHERE offer_id IN ({marks})", chunk)
+            self.db.execute(f"DELETE FROM offers WHERE id IN ({marks})", chunk)
+        self.db.execute("DELETE FROM redirects WHERE resolved_at < ?", (before,))
+        self.db.commit()
+        if vacuum:
+            self.db.execute("VACUUM")
+        return len(ids)
+
     # --- ricerca e statistiche ------------------------------------------------
 
     def search(self, term: str, limit: int) -> list[Offer]:

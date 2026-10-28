@@ -43,6 +43,7 @@ class Params:
     feed_max_elementi: int = 100
     giorni_dedupe: int = 7
     notifica_max_ore: int = 24
+    giorni_ritenzione: int = 90
     http_host: str = "127.0.0.1"
     http_port: int = 8099
 
@@ -109,6 +110,7 @@ def load_config(path: Path | str) -> Config:
         feed_max_elementi=int(raw.get("feed_max_elementi", 100)),
         giorni_dedupe=int(raw.get("giorni_dedupe", 7)),
         notifica_max_ore=int(raw.get("notifica_max_ore", 24)),
+        giorni_ritenzione=int(raw.get("giorni_ritenzione", 90)),
         http_host=str(raw.get("http_host", "127.0.0.1")),
         http_port=int(raw.get("http_port", 8099)),
     )

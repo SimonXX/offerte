@@ -10,6 +10,7 @@ parametri:
   feed_max_elementi: 100
   giorni_dedupe: 7                # la stessa offerta ripubblicata oltre questo intervallo è un'offerta nuova
   notifica_max_ore: 24            # non notifica offerte più vecchie di così (evita raffiche al primo avvio)
+  giorni_ritenzione: 90           # le offerte più vecchie si eliminano a fine giro (0 = mai)
 
 canali:
   - nome: erroridiprezzo
