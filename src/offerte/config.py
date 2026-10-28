@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -103,7 +104,7 @@ def load_config(path: Path | str) -> Config:
         user_agent=str(raw.get("user_agent") or DEFAULT_USER_AGENT),
         pagine_storico=max(1, int(raw.get("pagine_storico", 3))),
         var_dir=var_dir,
-        feed_base_url=str(raw.get("feed_base_url", "http://127.0.0.1:8099")).rstrip("/"),
+        feed_base_url=str(os.environ.get("OFFERTE_FEED_BASE_URL") or raw.get("feed_base_url", "http://127.0.0.1:8099")).rstrip("/"),
         feed_giorni=int(raw.get("feed_giorni", 14)),
         feed_max_elementi=int(raw.get("feed_max_elementi", 100)),
         giorni_dedupe=int(raw.get("giorni_dedupe", 7)),

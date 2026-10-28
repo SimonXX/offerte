@@ -213,6 +213,25 @@ RestartSec=5
 WantedBy=default.target
 ```
 
+## Deploy a costo zero su GitHub
+
+Il workflow `.github/workflows/offerte.yml` esegue la raccolta ogni 15 minuti su GitHub Actions e pubblica `var/feeds/`
+su GitHub Pages: i feed hanno un'URL pubblica, leggibile da Inoreader, senza server. Sui repository pubblici i runner
+standard non costano nulla; lo stato SQLite vive su un branch orfano `data` con un solo commit, riscritto a ogni giro.
+
+1. Pubblica il repository su GitHub, pubblico (Pages e minuti illimitati sul piano gratuito valgono solo lì).
+2. Settings, Pages, Source: `GitHub Actions`.
+3. Settings, Secrets and variables, Actions: `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` se vuoi le notifiche,
+   `APIFY_TOKEN` se usi fonti Apify. Senza segreti il workflow gira lo stesso.
+4. Actions, workflow `offerte`, `Run workflow` per il primo giro; poi il cron fa da solo.
+5. I feed sono su `https://<utente>.github.io/<repo>/`, ad esempio
+   `https://<utente>.github.io/<repo>/cartella/casa.xml`: in Inoreader, Add subscription, incolla l'URL.
+
+`feed_base_url` viene impostata dal workflow tramite la variabile `OFFERTE_FEED_BASE_URL`, che ha la precedenza sulla
+config. Il cron di GitHub parte al minimo ogni 5 minuti e può slittare di qualche minuto nei momenti di carico; dopo
+60 giorni senza attività GitHub spegne i cron, e il workflow si riabilita da solo a ogni giro per evitarlo. Per
+provare in locale il salvataggio dello stato: `OFFERTE_DATA_REMOTE=/percorso/repo.git ./deploy/stato.sh save`.
+
 ## Container
 
 ```sh

@@ -1,0 +1,67 @@
+# Raccolta ogni 15 minuti su GitHub Actions e feed pubblicati su GitHub Pages. Costo zero su repository pubblico.
+# Stato (SQLite) su un branch orfano "data" riscritto a ogni giro, così il repository non cresce.
+name: offerte
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [config.yaml, "src/**", pyproject.toml, uv.lock, ".github/workflows/offerte.yml", "deploy/**"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: offerte
+  cancel-in-progress: false
+
+env:
+  OFFERTE_FEED_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+jobs:
+  raccolta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen --no-dev
+      - name: Ripristina lo stato dal branch data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./deploy/stato.sh restore
+      - name: Raccolta
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: uv run offerte fetch
+      - name: Salva lo stato sul branch data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./deploy/stato.sh save
+      - name: Tieni acceso il cron (GitHub lo spegne dopo 60 giorni senza attività)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/offerte.yml/enable" || true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: var/feeds
+
+  pubblicazione:
+    needs: raccolta
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
