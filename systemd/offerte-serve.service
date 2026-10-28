@@ -1,0 +1,12 @@
+[Unit]
+Description=Offerte: server HTTP dei feed su 127.0.0.1:8099
+After=network.target
+
+[Service]
+WorkingDirectory=@PROJECT_DIR@
+ExecStart=@PROJECT_DIR@/.venv/bin/offerte serve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

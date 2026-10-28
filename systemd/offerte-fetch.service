@@ -1,0 +1,11 @@
+[Unit]
+Description=Offerte: raccolta dai canali Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=@PROJECT_DIR@
+ExecStart=@PROJECT_DIR@/.venv/bin/offerte fetch
+TimeoutStartSec=15min
+Nice=10

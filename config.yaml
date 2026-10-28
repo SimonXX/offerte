@@ -1,0 +1,34 @@
+# Configurazione di offerte. I percorsi relativi partono dalla cartella di questo file.
+
+parametri:
+  intervallo_cortesia: 3          # secondi fra una richiesta a t.me e la successiva
+  user_agent: "Mozilla/5.0 (X11; Linux x86_64) offerte/0.1"
+  pagine_storico: 3               # pagine di t.me/s (circa 20 messaggi l'una) lette al primo avvio di un canale
+  var_dir: var                    # database, feed e log
+  feed_base_url: http://127.0.0.1:8099   # base dei link "self" nei feed: se li esponi altrove, cambiala
+  feed_giorni: 14                 # finestra temporale dei feed
+  feed_max_elementi: 100
+  giorni_dedupe: 7                # la stessa offerta ripubblicata oltre questo intervallo è un'offerta nuova
+  notifica_max_ore: 24            # non notifica offerte più vecchie di così (evita raffiche al primo avvio)
+
+canali:
+  - nome: erroridiprezzo
+    cartella: casa
+    attivo: true
+  - nome: erroridiprezzo_offertedalweb
+    cartella: casa
+    attivo: true
+  - nome: offertetecnologia
+    cartella: informatica
+    attivo: true
+
+regole:
+  - nome: ssd-sotto-60
+    parole: ["ssd", "nvme", '/\b[12]\s?tb\b/']   # parola intera, oppure regex fra barre
+    prezzo_max: 60
+    canali: [informatica]            # nomi di canale o di cartella; assente = tutti
+    notify: true
+  - nome: errori-di-prezzo
+    parole: ["errore di prezzo", '/sconto:?\s*[7-9]\d\s?%/']
+    canali: [erroridiprezzo, erroridiprezzo_offertedalweb]
+    notify: false
