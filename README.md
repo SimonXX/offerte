@@ -28,7 +28,7 @@ poi in `./config.yaml`; i percorsi relativi nella config partono dalla cartella 
 
 ## Configurazione
 
-`config.yaml` con tre canali e tre regole:
+Estratto di `config.yaml` (il file nel repository ha 17 canali verificati, divisi in `informatica`, `casa`, `cina` e `raffica`):
 
 ```yaml
 parametri:

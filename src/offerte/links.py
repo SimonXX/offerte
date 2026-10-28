@@ -8,10 +8,15 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 TELEGRAM_HOSTS = {"t.me", "telegram.me", "telegram.dog", "telegram.org", "telesco.pe"}
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp")
+# Pulsanti e link "seguici" che non sono mai l'offerta.
+SOCIAL_HOSTS = {
+    "linktr.ee", "linkin.bio", "whatsapp.com", "chat.whatsapp.com", "instagram.com", "facebook.com", "youtube.com",
+    "youtu.be", "yt.openinapp.co", "tiktok.com", "x.com", "twitter.com", "play.google.com", "apps.apple.com",
+}
 SHORT_HOSTS = {
     "amzn.to", "amzn.eu", "a.co", "amzlink.to", "bit.ly", "bitly.com", "tinyurl.com", "cutt.ly", "t.ly", "rb.gy",
     "is.gd", "ow.ly", "tiny.cc", "shorturl.at", "ebay.us", "s.click.aliexpress.com", "fkrt.it", "rebrand.ly",
-    "lnk.to", "short.io", "trib.al", "buff.ly", "goo.gl", "shor.by", "mtkv.me",
+    "lnk.to", "short.io", "trib.al", "buff.ly", "goo.gl", "shor.by", "mtkv.me", "x.gd", "ofclub.click", "amzn.cl",
 }
 SHORT_PATH_RE = re.compile(r"^/[A-Za-z0-9_\-]{4,16}/?$")
 RETAIL_HOST_RE = re.compile(r"(?:^|\.)(?:amazon|ebay|aliexpress|mediaworld|unieuro|euronics)\.[a-z.]+$")
@@ -53,6 +58,11 @@ def is_telegram(url: str) -> bool:
     return h in TELEGRAM_HOSTS or h.endswith((".t.me", ".telegram.org"))
 
 
+def is_social(url: str) -> bool:
+    h = _host(url)
+    return any(h == s or h.endswith("." + s) for s in SOCIAL_HOSTS)
+
+
 def is_image_url(url: str) -> bool:
     return urlsplit(url).path.lower().endswith(IMAGE_EXT)
 
@@ -61,7 +71,7 @@ def pick_offer_link(links: list[str]) -> str | None:
     """Primo link esterno che non sia Telegram né un'immagine (i canali linkano foto per forzare l'anteprima)."""
     for raw in links:
         url = normalize_input(raw)
-        if _host(url) and not is_telegram(url) and not is_image_url(url):
+        if _host(url) and not is_telegram(url) and not is_social(url) and not is_image_url(url):
             return url
     return None
 

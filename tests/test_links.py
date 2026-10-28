@@ -32,6 +32,9 @@ def test_generico_conserva_query_funzionale():
 def test_scelta_link():
     assert pick_offer_link(["https://t.me/canale", "https://m.media-amazon.com/images/I/x.jpg", "https://amzn.to/abc"]) == "https://amzn.to/abc"
     assert pick_offer_link(["?q=%23tag", "https://t.me/x", "http://telegram.me/y"]) is None
+    # pulsanti "seguici" prima dell'offerta vera, come su alcuni canali
+    assert pick_offer_link(["https://linktr.ee/u_app", "https://chat.whatsapp.com/abc", "https://amzlink.to/az0x"]) == "https://amzlink.to/az0x"
+    assert pick_offer_link(["https://assets.offerte.club/up.jpg?t=1", "https://ofclub.click/1n3n08j"]) == "https://ofclub.click/1n3n08j"
 
 
 def test_short_link():
