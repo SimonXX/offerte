@@ -278,3 +278,75 @@ A21, A22, A23, A24, A25 e A26 soddisfatti.
 ### Lasciato aperto
 
 `dashboard.html`, `dashboard.css` e `dashboard.js` sono ancora segnaposto: S4.
+
+## S4, pagina
+
+Data: 29 ottobre 2026.
+
+### Cosa è stato fatto
+
+`src/offerte/static/dashboard.html`: struttura completa, meta CSP come primo elemento dopo `<meta charset>` e
+prima di ogni `<script>` e `<link>`, nessuno script né stile inline, nessun attributo `style` o `on*`, tutti i
+37 id obbligatori più `stato-testo`, `stato-fonti`, `elenco-fonti`, `motivo-regola`, `scorciatoie-prezzo`,
+`cart-gruppo`, `canali`, `riga-tutte`, `filtri-titolo`, `stato-fonti-titolo`, `aiuto-q`, `titolo-dialogo`.
+
+`dashboard.css`: dodici token di colore, ridefiniti identici sotto `@media (prefers-color-scheme: dark)` con
+`:root:not([data-theme="light"])` e sotto `:root[data-theme="dark"]`. Una colonna sotto i 900 px con gutter di
+16 px, due colonne sopra con la sinistra sticky da 320 px e la destra a 56 rem. Campi a 16 px (niente zoom di
+iOS al focus), aree toccabili da 44 px, nessuna animazione, nessun font esterno.
+
+`dashboard.js`: caricamento con `fetch("dashboard.json", {cache: "no-cache"})` e i sette stati di §3.11,
+controlli letti e scritti dallo stato, URL con `history.replaceState`, debounce di 200 ms su testo e numeri,
+schede costruite con `createElement` e `textContent`, 60 per volta con `DocumentFragment`, un solo listener per
+contenitore (la delegazione dell'evento `error` delle immagini usa la fase di cattura, perché `error` non
+risale), preset con conteggio calcolato nel browser, chip dei gruppi attivi, suggerimento quando l'elenco è
+vuoto, toast con «Annulla» per l'azzeramento, dialogo `<dialog>` con YAML e copia, riquadro delle fonti con
+punto colorato decorativo (`aria-hidden`) e testo esplicito.
+
+`tests/riferimento.py`: oracolo condiviso fra i test del motore e quelli della pagina (`regola_dello_stato`,
+`ordina`, `seleziona`), così l'atteso è scritto una volta sola.
+
+`tests/web/layout.html`: cinque iframe a 320, 360, 390, 768 e 1280 px che scrivono `scrollWidth` e
+`clientWidth` in `<pre id="esito">`; con `?w=360&h=900&tema=dark` mostra un solo riquadro e forza il tema, per
+gli screenshot.
+
+### Test
+
+227 prima, **286 dopo** (+59). `tests/test_dashboard_web.py` da 11 a 65 (A27, A28, A29),
+`tests/test_dashboard_browser.py` nuovo (5 test, 24 URL di riferimento).
+
+I 24 URL di `test_url_riferimento` coprono parola semplice, due parole, `tutte`, regex, escludi, prezzo massimo,
+prezzo minimo 0, minimo e massimo, `pmin > pmax` scambiati, `smin`, `cp`, sconto più coupon, cartella, cartelle
+multiple, canale, cartella più canale, canale sconosciuto, i sei ordinamenti e una combinazione di cinque
+filtri. Il riferimento lo calcola Python con `rules.matches` più periodo e ordinamento.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 286 passed in 36,5 s (35 s sono i dodici avvii di Chrome) |
+| controllo trattini | nessuna riga |
+| Chrome headless su `dashboard.html` con dati demo | `data-stato="pronto"`, 303 offerte, 60 schede, preset con conteggio |
+| screenshot a 360 px con tema scuro | leggibile, `scrollWidth` 345 uguale a `clientWidth` |
+| screenshot a 1400 px | due colonne, pannello sticky, schede corrette |
+| `file://dashboard.html` | `data-stato="errore-file"` |
+| `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |
+
+A27, A28, A29, A30, A31, A32 e A33 soddisfatti.
+
+### Difetti trovati e corretti durante lo sprint
+
+Con l'immagine che non carica, la scheda restava a due colonne e il testo finiva nei 72 px: ora il listener di
+`error` aggiunge anche la classe `senza-foto` all'articolo. Visto in uno screenshot a 1400 px, non dai test.
+
+### Deviazioni
+
+- Il dialogo «Crea regola» non si apre nei test automatici: `--dump-dom` non fa clic. Lo stato del pulsante e
+  il motivo visibile sono verificati nel DOM, e `yamlRegola` è coperto dai test del motore su quattro runtime.
+  La prova a mano del dialogo resta in A36.
+- `#stato-fonti` sta dentro `#stato-dati`, che è quindi un `<div role="status">` con dentro un `<p>` per il
+  testo: un `<details>` non può stare dentro un `<p>`.
+
+### Lasciato aperto
+
+README, versione 0.3.0, `uv lock`, controllo della wheel e prova su telefono: S5.

@@ -12,10 +12,10 @@ import pytest
 import yaml
 
 from js_runner import esegui, motori_disponibili
-from offerte.config import Rule, compile_keyword, load_config
+from offerte.config import load_config
 from offerte.feeds import dashboard_cartelle
 from offerte.rules import matches
-from offerte.store import Offer
+from riferimento import offerta, ordina, regola_dello_stato
 
 FIXTURE = Path(__file__).parent / "fixtures" / "dashboard_casi.json"
 MOTORI = motori_disponibili()
@@ -54,39 +54,13 @@ def risultati(casi):
     return {motore: esegui(motore, casi) for motore in MOTORI}
 
 
-def offerta(voce) -> Offer:
-    return Offer(id=voce["id"], key=str(voce["id"]), title=voce["n"], text=voce["x"], link=voce.get("u"),
-                 permalink=voce.get("u") or "", image=None, price=voce.get("p"), old_price=voce.get("b"),
-                 discount=voce.get("s"), coupon=voce.get("c"), posted_at="", first_seen="", last_seen="",
-                 channels=list(voce["k"]), n_posts=1)
-
-
-def offerte_di(casi) -> list[Offer]:
+def offerte_di(casi) -> list:
     return [offerta(v) for v in casi["offerte"]]
 
 
-def canali_dello_stato(stato, cartelle) -> frozenset[str]:
-    nomi: set[str] = set()
-    for c in stato.get("cart", []):
-        nomi |= set(cartelle.get(c, []))
-    nomi |= set(stato.get("can", []))
-    return frozenset(nomi)
-
-
-def regola_dello_stato(stato, cartelle) -> Rule:
-    """La stessa selezione dello stato, scritta come Rule: è l'oracolo del motore JavaScript."""
-    return Rule(nome="caso",
-                parole=tuple(compile_keyword(p) for p in stato.get("q", [])),
-                escludi=tuple(compile_keyword(p) for p in stato.get("no", [])),
-                tutte=bool(stato.get("tutte", False)),
-                prezzo_min=stato.get("pmin"), prezzo_max=stato.get("pmax"),
-                sconto_min=stato.get("smin"), solo_coupon=bool(stato.get("cp", False)),
-                canali=canali_dello_stato(stato, cartelle))
-
-
-def ordinati(offerte: list[Offer], per_id: dict[int, dict]) -> list[int]:
+def ordinati(offerte, per_id) -> list[int]:
     """Ordine di default della pagina: data decrescente, poi id decrescente."""
-    return [o.id for o in sorted(offerte, key=lambda o: (per_id[o.id]["t"], o.id), reverse=True)]
+    return [v["id"] for v in ordina([per_id[o.id] for o in offerte], "data-desc")]
 
 
 def casi_di_parita(casi):

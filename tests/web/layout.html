@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prova di larghezza</title>
+<style>
+ body { margin: 0; font-family: system-ui, sans-serif; background: #ffffff; color: #111111; }
+ .cella { display: inline-block; vertical-align: top; margin: 8px; }
+ .cella p { margin: 4px 0; font: 12px/1.2 system-ui, sans-serif; }
+ iframe { border: 1px solid #888888; }
+ #esito { white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; padding: 4px 8px; }
+</style>
+</head>
+<body>
+<pre id="esito">in corso</pre>
+<div id="celle"></div>
+<script>
+// Chrome headless con --window-size non stringe davvero il viewport: l'iframe sì.
+(function () {
+  var par = new URLSearchParams(location.search);
+  var larghezze = par.get("w") ? [parseInt(par.get("w"), 10)] : [320, 360, 390, 768, 1280];
+  var altezza = parseInt(par.get("h") || "900", 10);
+  var tema = par.get("tema") || "";
+  var coda = par.get("qs") || "";
+  var celle = document.getElementById("celle");
+  var riquadri = [];
+  larghezze.forEach(function (w) {
+    var cella = document.createElement("div");
+    cella.className = "cella";
+    var titolo = document.createElement("p");
+    titolo.textContent = w + " px";
+    var frame = document.createElement("iframe");
+    frame.src = "dashboard.html" + coda;
+    frame.width = w;
+    frame.height = altezza;
+    cella.appendChild(titolo);
+    cella.appendChild(frame);
+    celle.appendChild(cella);
+    riquadri.push({larghezza: w, frame: frame});
+  });
+  var tentativi = 0;
+  function guarda() {
+    tentativi += 1;
+    var esito = {};
+    var pronti = 0;
+    riquadri.forEach(function (voce) {
+      var doc = voce.frame.contentDocument;
+      if (!doc || doc.documentElement.getAttribute("data-stato") !== "pronto") { return; }
+      if (tema) { doc.documentElement.setAttribute("data-theme", tema); }
+      pronti += 1;
+      esito[voce.larghezza] = {scrollWidth: doc.documentElement.scrollWidth,
+                               clientWidth: doc.documentElement.clientWidth};
+    });
+    if (pronti === riquadri.length || tentativi > 150) {
+      document.getElementById("esito").textContent = JSON.stringify(esito);
+      return;
+    }
+    setTimeout(guarda, 50);
+  }
+  guarda();
+}());
+</script>
+</body>
+</html>

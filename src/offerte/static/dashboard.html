@@ -1,1 +1,167 @@
-<!-- Segnaposto: la pagina vera arriva con lo sprint S4. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src https: http:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Offerte</title>
+<link rel="stylesheet" href="dashboard.css">
+<script defer src="filtri.js"></script>
+<script defer src="dashboard.js"></script>
+</head>
+<body>
+
+<header class="barra">
+  <h1>Offerte</h1>
+  <div id="stato-dati" role="status">
+    <p id="stato-testo">Carico le offerte... Se non succede nulla, apri la pagina da 127.0.0.1:8099/dashboard.html (offerte serve): da file:// i dati non si caricano.</p>
+    <details id="stato-fonti" hidden>
+      <summary id="stato-fonti-titolo">Fonti</summary>
+      <ul id="elenco-fonti" class="fonti"></ul>
+    </details>
+  </div>
+  <p class="azioni-barra">
+    <button type="button" id="ricarica">Ricarica</button>
+    <a href="index.html">Feed</a>
+  </p>
+</header>
+
+<div id="avvisi"></div>
+
+<main class="colonne">
+
+  <form class="pannello" id="modulo">
+    <p class="campo">
+      <label for="q">Parole</label>
+      <textarea id="q" rows="3" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-describedby="aiuto-q"></textarea>
+    </p>
+    <p id="aiuto-q" class="aiuto">Una voce per riga. Una voce fra barre e' una regex, tradotta dalla sintassi di Python: gruppi possessivi, gruppi atomici e le classi negate dentro parentesi quadre non funzionano.</p>
+    <p id="errore-q" role="alert" class="errore"></p>
+
+    <details id="filtri">
+      <summary id="filtri-titolo">Filtri</summary>
+
+      <p class="campo">
+        <label for="no">Escludi</label>
+        <textarea id="no" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-describedby="errore-no"></textarea>
+      </p>
+      <p id="errore-no" role="alert" class="errore"></p>
+
+      <p class="campo campo-casella" id="riga-tutte" hidden>
+        <input type="checkbox" id="tutte">
+        <label for="tutte">Devono comparire tutte le parole</label>
+      </p>
+
+      <fieldset>
+        <legend>Prezzo</legend>
+        <div class="coppia">
+          <p class="campo"><label for="pmin">Da</label>
+            <input type="text" id="pmin" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></p>
+          <p class="campo"><label for="pmax">A</label>
+            <input type="text" id="pmax" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></p>
+        </div>
+        <p class="scorciatoie" id="scorciatoie-prezzo">
+          <button type="button" data-pmax="25">fino a 25 &euro;</button>
+          <button type="button" data-pmax="50">fino a 50 &euro;</button>
+          <button type="button" data-pmax="100">fino a 100 &euro;</button>
+          <button type="button" data-pmax="250">fino a 250 &euro;</button>
+        </p>
+      </fieldset>
+
+      <p class="campo">
+        <label for="smin">Sconto minimo (%)</label>
+        <input type="number" id="smin" min="1" max="99" step="1" inputmode="numeric" autocomplete="off">
+      </p>
+
+      <fieldset id="cart-gruppo">
+        <legend>Cartella</legend>
+        <div id="cart"></div>
+      </fieldset>
+
+      <details id="canali">
+        <summary>Canali</summary>
+        <div id="can"></div>
+      </details>
+
+      <p class="campo">
+        <label for="per">Periodo</label>
+        <select id="per">
+          <option value="">Tutto il periodo</option>
+          <option value="1h">Ultima ora</option>
+          <option value="3h">Ultime 3 ore</option>
+          <option value="6h">Ultime 6 ore</option>
+          <option value="12h">Ultime 12 ore</option>
+          <option value="24h">Ultime 24 ore</option>
+          <option value="48h">Ultime 48 ore</option>
+          <option value="3g">Ultimi 3 giorni</option>
+          <option value="7g">Ultimi 7 giorni</option>
+        </select>
+      </p>
+
+      <p class="campo campo-casella">
+        <input type="checkbox" id="cp">
+        <label for="cp">Solo con coupon</label>
+      </p>
+
+      <p class="azioni">
+        <button type="button" id="azzera">Azzera filtri</button>
+        <button type="button" id="copia-link">Copia link</button>
+        <button type="button" id="regola">Crea regola</button>
+      </p>
+      <p id="motivo-regola" class="aiuto"></p>
+    </details>
+  </form>
+
+  <section class="risultati">
+    <div id="preset" class="preset" hidden></div>
+    <div id="chip-attivi" class="chip"></div>
+    <p class="riga-conta">
+      <span id="conta" aria-live="polite"></span>
+      <span class="campo campo-ord"><label for="ord">Ordina</label>
+        <select id="ord">
+          <option value="data-desc">Pi&ugrave; recenti</option>
+          <option value="data-asc">Meno recenti</option>
+          <option value="prezzo-asc">Prezzo crescente</option>
+          <option value="prezzo-desc">Prezzo decrescente</option>
+          <option value="sconto-desc">Sconto maggiore</option>
+          <option value="sconto-asc">Sconto minore</option>
+        </select></span>
+    </p>
+    <p id="nascoste"></p>
+    <p id="suggerimento"></p>
+    <div id="elenco"></div>
+    <p class="riga-altre"><button type="button" id="altre" hidden>Mostra altre 60</button></p>
+  </section>
+
+</main>
+
+<div id="toast" role="status" hidden></div>
+
+<dialog id="dialogo" aria-labelledby="titolo-dialogo">
+  <h2 id="titolo-dialogo">Crea regola</h2>
+  <p class="campo">
+    <label for="nome-regola">Nome</label>
+    <input type="text" id="nome-regola" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+  </p>
+  <p id="nome-avviso" class="aiuto"></p>
+  <p class="campo campo-casella">
+    <input type="checkbox" id="notify">
+    <label for="notify">Notifica su Telegram</label>
+  </p>
+  <p class="campo">
+    <label for="yaml">Regola da incollare</label>
+    <textarea id="yaml" rows="10" readonly spellcheck="false"></textarea>
+  </p>
+  <p id="esclusi-regola" class="aiuto"></p>
+  <p class="aiuto">Incolla sotto <code>regole:</code> in config.yaml.</p>
+  <p class="azioni">
+    <button type="button" id="copia-yaml">Copia YAML</button>
+    <button type="button" id="chiudi-dialogo">Chiudi</button>
+  </p>
+</dialog>
+
+</body>
+</html>
