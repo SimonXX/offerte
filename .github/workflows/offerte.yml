@@ -58,6 +58,7 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.AUTOAVVIO_TOKEN }}
+          AUTOAVVIO_PAUSA: ${{ vars.AUTOAVVIO_PAUSA }}   # secondi di attesa prima del giro dopo; vuoto = nessuna
         run: ./deploy/autoavvio.sh
 
   pubblicazione:

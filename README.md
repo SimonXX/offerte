@@ -518,6 +518,11 @@ permesso `Actions: read and write`. Senza quel secret lo script non fa niente e 
 secret è il modo di fermare il ciclo**. Due giri non si sovrappongono mai, per due motivi indipendenti: il gruppo
 `concurrency` li mette in fila e lo script non chiede un giro nuovo se ne vede già uno vivo.
 
+Senza arretrato da smaltire un giro dura circa un minuto e mezzo, quindi il ciclo gira più o meno a quel ritmo. Per
+rallentarlo senza toccare il codice c'è la variabile `AUTOAVVIO_PAUSA`, secondi di attesa prima di chiedere il giro
+successivo: `gh variable set AUTOAVVIO_PAUSA --body 180` porta la cadenza a circa cinque minuti,
+`gh variable delete AUTOAVVIO_PAUSA` la riporta al massimo.
+
 ## Container
 
 ```sh
