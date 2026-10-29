@@ -1,4 +1,4 @@
-"""Interfaccia a riga di comando: offerte fetch | serve | search | stats."""
+"""Interfaccia a riga di comando: fetch, serve, feed, search, stats, filtra, fonti, prova, pulisci."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pathlib import Path
 from . import __version__
 from .config import CRITERI_REGOLA, Config, ConfigError, Rule, compile_keyword, load_config
 from .extract import extract
-from .feeds import fmt_price
+from .feeds import fmt_price, write_feeds
 from .fetch import run_fetch
 from .http import Client
 from .log import setup_logging
@@ -42,6 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("serve", help="serve var/feeds via HTTP")
     p.add_argument("--host", help="default: parametri.http_host (127.0.0.1)")
     p.add_argument("--port", type=int, help="default: parametri.http_port (8099)")
+
+    sub.add_parser("feed", help="rigenera feed e dashboard dal database, senza leggere i canali")
 
     p = sub.add_parser("search", help="cerca una parola nel testo e nel titolo delle offerte")
     p.add_argument("parola")
@@ -99,6 +101,14 @@ def cmd_fetch(args: argparse.Namespace, config: Config) -> int:
 def cmd_serve(args: argparse.Namespace, config: Config) -> int:
     p = config.parametri
     serve(p.var_dir / "feeds", args.host or p.http_host, args.port or p.http_port)
+    return 0
+
+
+def cmd_feed(args: argparse.Namespace, config: Config) -> int:
+    p = config.parametri
+    with Store(p.var_dir / "offerte.sqlite") as store:
+        scritti = write_feeds(store, config, datetime.now(timezone.utc))
+    print(f"scritti {len(scritti)} feed in {p.var_dir / 'feeds'}")
     return 0
 
 
@@ -230,8 +240,8 @@ def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
-COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats": cmd_stats, "filtra": cmd_filtra,
-            "fonti": cmd_fonti, "prova": cmd_prova, "pulisci": cmd_pulisci}
+COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "feed": cmd_feed, "search": cmd_search, "stats": cmd_stats,
+            "filtra": cmd_filtra, "fonti": cmd_fonti, "prova": cmd_prova, "pulisci": cmd_pulisci}
 
 
 def main(argv: list[str] | None = None) -> int:

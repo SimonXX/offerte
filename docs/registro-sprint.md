@@ -133,3 +133,83 @@ A18, A19 e A20 soddisfatti.
 ### Lasciato aperto
 
 Niente di S1.
+
+## S2, dati e backend
+
+Data: 29 ottobre 2026.
+
+### Cosa è stato fatto
+
+`feeds.py`: `safe_url` (solo http e https), `item_name` (nome senza prezzo, ripiego `(senza titolo)`) da cui ora
+parte `item_title`, `_epoch`, `dashboard_cartelle`, `dashboard_regole`, `dashboard_fonti`, `dashboard_offerta`,
+`dashboard_bytes` (pura) e `write_dashboard`. La pulizia dei feed vecchi è ristretta a `cartella/*` e `regola/*`,
+così `dashboard.json` nella radice sopravvive. `write_feeds` scrive anche `feeds.opml`, mette il link alla
+dashboard e all'OPML in `index.html` e chiama `write_dashboard` in `try/except`: se la dashboard fallisce, feed,
+notifiche e salvataggio dello stato arrivano comunque in fondo.
+
+`cli.py`: sottocomando `feed`, che rigenera feed e dashboard dal database senza leggere i canali.
+
+`src/offerte/static/`: i quattro file arrivano come segnaposto di una riga; il contenuto vero è di S3 e S4.
+
+`tests/demo_dati.py`: `crea_db(path, n, now, seed)` con offerte sintetiche deterministiche sui 17 canali nelle 4
+cartelle reali (80% con prezzo, circa metà di quelle con sconto, 8% con coupon, una quindicina viste su due
+canali, testi con accenti e `c++`, 3 offerte ostili con `javascript:`, `data:` e `<img onerror>`), `scrivi_config`
+e un `main` che riempie il database, applica le regole e scrive i feed.
+
+### Contratto dati
+
+Chiavi di testa: `v generato finestra_giorni troncato cartelle regole fonti offerte`. Il campo `fonti` è
+l'integrazione chiesta dal prompt: una voce per fonte di `config.fonti`, anche inattive, nell'ordine di config,
+con `nome`, `cartella` minuscola, `ogni`, `attiva` e, se presenti, `ultimo_fetch` e `stato`.
+
+### Misure
+
+| dataset | offerte | in chiaro | gzip -9 | `dashboard_bytes` |
+|:--|--:|--:|--:|--:|
+| giro reale su 17 canali (finestra 14 giorni) | 256 | 261.328 byte | 121.494 byte | - |
+| demo deterministica | 6.003 | 3.067.912 byte | 323.704 byte | 49 ms |
+
+1.021 byte per offerta in chiaro sul dataset reale, in linea con i 1.022 misurati nella specifica. La soglia di
+A16 (sotto 1,5 s e sotto 8 MB su 6000 offerte) è rispettata con ampio margine.
+
+### Test
+
+166 prima, **192 dopo** (+26). Nuovo `tests/test_dashboard.py` (24), più `test_feeds.py` da 2 a 3 e
+`test_fetch.py` da 6 a 7.
+
+Coperti A2 (chiavi di testa e dell'offerta), A3 (nessun `null`, ricorsivo e sul testo), A4 (ordine per `(t, id)`
+decrescente indipendente dall'ordine di lettura, finestra), A5 (troncamento), A6 (cartelle minuscole unite, con
+le fonti inattive), A7 (stringhe sorgenti e slug, `dashboard_regole: false`), A8 (`safe_url` e ripiego sul
+permalink), A9 (`item_name` senza testo), A10 (cinque file scritti e conservati, `cartella/vecchia.json`
+rimossa, link nell'indice), A11 (`dashboard: false` rimuove i cinque file), A12 (isolamento con monkeypatch che
+solleva), A13 (parametri da YAML e chiave sconosciuta rifiutata), A14 (asset non riscritti, mtime invariato),
+A15 (`offerte feed`), A16 (prestazioni), A17 (`test_giro_completo` con 6 offerte e i quattro asset), più lo stato
+delle fonti e l'OPML.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 192 passed in 0,50 s |
+| controllo trattini | nessuna riga |
+| `uv run offerte --help` | ok, nove sottocomandi |
+| `uv run python tests/demo_dati.py /tmp/offerte-demo 600` | 600 offerte, 7 feed |
+| `uv run offerte -c /tmp/offerte-prova/config.yaml feed` | scritti 7 feed, `dashboard.json` con 256 offerte |
+| `offerte serve` più `curl` su `index.html`, `dashboard.json`, `feeds.opml`, `dashboard.html` | 200 su tutti e quattro |
+| `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |
+
+### Deviazioni
+
+- `dashboard_bytes` prende `fonti` come quarto parametro, subito dopo `regole`, così l'ordine degli argomenti
+  segue quello delle chiavi di testa. La specifica (§2.3 e §2.2) e il criterio A2 sono stati corretti.
+- `write_feeds` scrive anche `feeds.opml` e `index.html` lo linka: integrazione chiesta dal prompt, aggiunta
+  alla specifica in §2.1.
+- §0 della specifica diceva che `docs/` non era tracciata: corretto.
+- Problema 54 (collisione di slug fra cartelle che differiscono solo per le maiuscole) resta aperto e si è visto
+  scrivendo il test dell'OPML: con `Informatica` e `informatica` in config, `write_feeds` scrive due volte
+  `cartella/informatica.xml`. Il test dell'OPML usa quindi una config senza collisione. `dashboard_cartelle`
+  non ne soffre, perché unisce le chiavi in minuscolo.
+
+### Lasciato aperto
+
+Problemi 4, 5, 6 e 25 chiusi da questo sprint. I quattro file statici sono segnaposto fino a S3 e S4.

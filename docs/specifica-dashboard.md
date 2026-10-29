@@ -2,7 +2,7 @@
 
 ## 0. Contesto e vincoli
 
-Repository: `~/Projects/repos/offerte`, branch `main`, commit `16e8709`, Python 3.12, uv. `uv run pytest -q` oggi dà 73 test verdi. `var/offerte.sqlite` è vuoto (0 offerte), quindi per provare la pagina servono dati demo (si creano in S2). La cartella `docs/` non è ancora tracciata (`git status` la mostra come `??`): entra nel commit di S0 con `git add docs/<file>` per ciascun file e da lì si committa insieme al codice. Si usa sempre `git add <percorso>`, mai `git add -A` né `git add .`, per non trascinare `var/` o file di prova.
+Repository: `~/Projects/repos/offerte`, branch `main`, commit `16e8709`, Python 3.12, uv. `uv run pytest -q` dava 73 test verdi; dopo S0 e S1 ne dà 192. `var/offerte.sqlite` è vuoto (0 offerte), quindi per provare la pagina servono dati demo (si creano in S2). La cartella `docs/` è tracciata dal commit `bb1ccd0`. Si usa sempre `git add <percorso>`, mai `git add -A` né `git add .`, per non trascinare `var/` o file di prova.
 
 Stato letto nel codice:
 
@@ -72,6 +72,7 @@ I quattro file statici stanno nella radice di `var/feeds/` accanto a `dashboard.
 | file | origine |
 |:--|:--|
 | `dashboard.json` | dati, scritto per ultimo a ogni giro |
+| `feeds.opml` | elenco di tutti i feed scritti, un `outline` per cartella e uno per regola con `xmlUrl` assoluto; `index.html` lo linka |
 | `dashboard.html`, `dashboard.css`, `filtri.js`, `dashboard.js` | copia byte per byte da `src/offerte/static/`, riscritta solo se i byte differiscono |
 
 Tutti passano da `_atomic_write` (`feeds.py:112-115`). Ordine di scrittura: prima i quattro asset, poi `dashboard.json`.
@@ -84,6 +85,7 @@ Codifica UTF-8, `json.dumps(doc, ensure_ascii=False, separators=(",", ":"))`, ne
 {"v":1,"generato":1761685200,"finestra_giorni":14,"troncato":false,
  "cartelle":{"casa":["erroridiprezzo","mttcasa"],"informatica":["mttvideo","prezzitech"]},
  "regole":[{"nome":"ssd-sotto-60","slug":"ssd-sotto-60","parole":["ssd","nvme","/\\b[12]\\s?tb\\b/"],"escludi":[],"tutte":false,"prezzo_max":60,"solo_coupon":false,"canali":["informatica"]}],
+ "fonti":[{"nome":"mttvideo","cartella":"informatica","ogni":0,"attiva":true,"ultimo_fetch":1761684000,"stato":"ok"}],
  "offerte":[{"id":4821,"t":1761684600,"n":"SSD Samsung 980 PRO 1TB","x":"testo intero\n79,99€ invece di 129€","k":["mttvideo","prezzitech"],"p":79.99,"b":129.0,"s":38,"c":"SSD10","u":"https://www.amazon.it/dp/B08GLX7TNT?tag=canale-21","m":"https://t.me/mttvideo/1234","i":"https://cdn4.telesco.pe/file/abc.jpg"}]}
 ```
 
@@ -97,7 +99,19 @@ Campi di testa:
 | `troncato` | bool | vero se le offerte della finestra superano `dashboard_max_offerte` e l'elenco è stato tagliato alle più recenti |
 | `cartelle` | oggetto cartella (minuscola) -> lista ordinata di nomi di fonte | tutte le fonti di `config.fonti`, anche inattive, chiavi unite in minuscolo come `config.py:136-138`, chiavi ordinate |
 | `regole` | lista di oggetti | vuota se `dashboard_regole` è falso, altrimenti una voce per regola in ordine di config |
+| `fonti` | lista di oggetti | una voce per fonte di `config.fonti`, anche inattive, nell'ordine di config |
 | `offerte` | lista di oggetti | vedi sotto |
+
+Voce di `fonti`, da `dashboard_fonti(config, store)`:
+
+| campo | tipo | presenza |
+|:--|:--|:--|
+| `nome` | str | sempre |
+| `cartella` | str | sempre, minuscola come le chiavi di `cartelle` |
+| `ogni` | int | sempre, minuti; `0` se assente |
+| `attiva` | bool | sempre |
+| `ultimo_fetch` | int | epoch da `SourceState.last_fetch`, omesso se la fonte non è mai stata letta |
+| `stato` | str | da `SourceState.last_status` (`ok`, `vuota`, `error`, `no_preview`), omesso se assente |
 
 Le `cartelle` devono includere le fonti inattive perché `load_config` risolve `canali: [cartella]` su tutte le fonti (`config.py:136-138`, `156-164`), mentre `Config.cartelle()` (`config.py:61-66`) esclude le inattive. Non usare `Config.cartelle()`.
 
@@ -144,8 +158,9 @@ Ordine e limiti: offerte ordinate per `(t, id)` decrescente con ordinamento espl
 | `safe_url(u: str \| None) -> str \| None` | dopo `fmt_price` (riga 26) |
 | `dashboard_cartelle(config) -> dict[str, list[str]]` | dopo riga 134 |
 | `dashboard_regole(config) -> list[dict]` | dopo riga 134 |
+| `dashboard_fonti(config, store) -> list[dict]` | dopo riga 134 |
 | `dashboard_offerta(o: Offer) -> dict` | dopo riga 134 |
-| `dashboard_bytes(offers, cartelle, regole, now, giorni, max_offerte=10000) -> bytes`, pura e testabile senza disco | dopo riga 134 |
+| `dashboard_bytes(offers, cartelle, regole, fonti, now, giorni, max_offerte=10000) -> bytes`, pura e testabile senza disco | dopo riga 134 |
 | `write_dashboard(store, config, now) -> int`, restituisce il numero di offerte scritte | dopo riga 134 |
 | `_index_html(entries, base_url, now, con_dashboard=False)` aggiunge dopo l'`<h1>` (riga 123) `<p><a href='dashboard.html'>Dashboard</a></p>` se `con_dashboard` | righe 118-134 |
 | `write_feeds` passa `con_dashboard=p.dashboard`, poi chiama `write_dashboard` in `try/except` | riga 164 |
@@ -503,7 +518,7 @@ Aggiornati a ogni rendering, senza effetti sul comportamento:
 | n. | criterio | verifica |
 |:--|:--|:--|
 | A1 | I 73 test esistenti passano senza modificare le loro asserzioni; tutti i test nuovi passano | `uv run pytest -q` |
-| A2 | `dashboard.json` ha esattamente le chiavi `v generato finestra_giorni troncato cartelle regole offerte`; ogni offerta ha solo chiavi ammesse e i tipi del contratto | `test_contratto_offerta`, `test_head_e_tipi` |
+| A2 | `dashboard.json` ha esattamente le chiavi `v generato finestra_giorni troncato cartelle regole fonti offerte`; ogni offerta ha solo chiavi ammesse e i tipi del contratto | `test_contratto_offerta`, `test_head_e_tipi` |
 | A3 | Il file non contiene mai il valore `null` (ricerca ricorsiva e sul testo) | `test_nessun_null` |
 | A4 | Offerte ordinate per `(t, id)` decrescente indipendentemente dall'ordine di lettura dal DB; escluse quelle fuori da `feed_giorni` | `test_ordine_e_finestra` |
 | A5 | Con `dashboard_max_offerte = 2` restano le 2 più recenti e `troncato` è `true` | `test_troncamento` |

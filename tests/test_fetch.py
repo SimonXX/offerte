@@ -103,6 +103,13 @@ def test_giro_completo(ambiente):
         assert (feeds / "cartella" / "casa.xml").exists() and (feeds / "index.html").exists()
         assert (var / "offerte.sqlite").exists()
 
+        dash = json.loads((feeds / "dashboard.json").read_text(encoding="utf-8"))
+        assert len(dash["offerte"]) == 6 and dash["v"] == 1
+        assert sorted(dash["cartelle"]) == ["casa", "informatica"]
+        assert [f["nome"] for f in dash["fonti"]] == ["canale_test", "privato", "rotto"]
+        for nome in ("dashboard.html", "dashboard.css", "filtri.js", "dashboard.js"):
+            assert (feeds / nome).exists(), nome
+
         # secondo giro: niente di nuovo, nessuna notifica ripetuta, il canale rotto resta isolato
         s2 = run_fetch(config, store, client, notifier, now=NOW)
         assert s2.new_posts == 0 and s2.notified == 0 and len(inviate) == 1
@@ -209,3 +216,22 @@ def test_fonte_html_vuota_resta_fra_le_ok(tmp_path):
         s = run_fetch(config, store, client, None, now=NOW)
         assert s.ok == ["pagina"] and not s.failed
         assert store.channel_state("pagina").last_status == "vuota"
+
+
+def test_isolamento_errore_dashboard(ambiente, monkeypatch, caplog):
+    """Se la dashboard fallisce, il giro arriva in fondo: feed scritti, stato salvabile, niente rinotifiche."""
+    config, transport, _ = ambiente
+
+    def esplode(store, config, now):
+        raise RuntimeError("disco pieno")
+
+    monkeypatch.setattr("offerte.feeds.write_dashboard", esplode)
+    var = config.parametri.var_dir
+    with Store(var / "offerte.sqlite") as store, caplog.at_level("ERROR"):
+        client = Client("ua", courtesy=0, transport=transport, sleep=lambda s: None)
+        s = run_fetch(config, store, client, None, now=NOW)
+    assert s.ok == ["canale_test"] and len(s.new_offers) == 6
+    assert (var / "feeds" / "cartella" / "informatica.xml").exists()
+    assert (var / "feeds" / "index.html").exists()
+    assert not (var / "feeds" / "dashboard.json").exists()
+    assert "dashboard: scrittura fallita" in caplog.text
