@@ -47,6 +47,9 @@ parametri:
   giorni_dedupe: 7                # la stessa offerta ripubblicata oltre questo intervallo è un'offerta nuova
   notifica_max_ore: 24            # non notifica offerte più vecchie di così (evita raffiche al primo avvio)
   giorni_ritenzione: 90           # le offerte più vecchie si eliminano a fine giro (0 = mai)
+  dashboard: true                 # scrive dashboard.json e la pagina dei filtri in var/feeds/
+  dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
+  dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
 
 canali:
   - {nome: mttvideo,            cartella: informatica}   # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
@@ -74,8 +77,13 @@ Una regola scatta se almeno una parola compare nel testo (con `tutte: true` devo
 semplice è cercata come parola intera, senza distinzione di maiuscole; una voce fra barre (`'/…/'`) è una regex
 Python, sempre case-insensitive. `escludi` elenca parole che annullano la corrispondenza: è il modo per tenere fuori
 cinturini e cover quando si cerca un Apple Watch. `prezzo_max` e `prezzo_min` si applicano al prezzo attuale
-estratto: un'offerta senza prezzo non passa un filtro di prezzo. `canali` accetta nomi di canale o di cartella;
-assente, la regola vale per tutti. Le regole si valutano a ogni giro sulle offerte della finestra `feed_giorni`, quindi
+estratto: un'offerta senza prezzo non passa un filtro di prezzo. `sconto_min` è la percentuale minima di sconto e
+`solo_coupon: true` tiene solo le offerte con un codice: un'offerta senza sconto, o senza coupon, non li passa.
+`canali` accetta nomi di canale o di cartella; assente, la regola vale per tutti.
+
+Le parole sono facoltative se c'è almeno un altro criterio (`prezzo_min`, `prezzo_max`, `sconto_min`,
+`solo_coupon`, `canali`): «tutto quello che sta sotto 20 euro» è una regola valida. `escludi` da solo non basta, e
+una regola senza parole non può avere `notify: true`, altrimenti notificherebbe a raffica. Le regole si valutano a ogni giro sulle offerte della finestra `feed_giorni`, quindi
 una regola nuova popola subito il proprio feed con il pregresso; le notifiche partono solo per le offerte nuove del giro.
 
 ## Fonti
@@ -117,7 +125,7 @@ fetch di tutte. Esempi di configurazione per ogni tipo sono commentati in `confi
 | `offerte serve [--host H] [--port P]` | serve `var/feeds/` via HTTP (default `127.0.0.1:8099`) |
 | `offerte search <parola> [--limite N]` | cerca nel testo e nel titolo delle offerte salvate |
 | `offerte stats [--giorni N]` | offerte al giorno per canale e regole scattate |
-| `offerte filtra <parole…> [--prezzo-max X] [--prezzo-min X] [--escludi …] [--tutte] [--canali …]` | prova una regola al volo sulle offerte salvate, per tararla prima di metterla in config |
+| `offerte filtra [parole…] [--prezzo-max X] [--prezzo-min X] [--sconto-min N] [--solo-coupon] [--escludi …] [--tutte] [--canali …]` | prova una regola al volo sulle offerte salvate, per tararla prima di metterla in config |
 
 Esempio: `offerte filtra "apple watch" --prezzo-max 250 --escludi cinturino cover`.
 Opzioni globali: `--config` (`-c`), `-v` (debug), `--version`. Vanno scritte prima del sottocomando

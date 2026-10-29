@@ -85,3 +85,87 @@ def test_config_regola_completa(tmp_path):
         encoding="utf-8")
     r = load_config(tmp_path / "config.yaml").regole[0]
     assert (r.prezzo_max, r.prezzo_min, r.tutte, len(r.escludi)) == (250.0, 80.0, True, 1)
+
+
+def offerta_completa(**kw):
+    base = dict(id=1, key="k", title=None, text="ssd nvme", link=None, permalink="p", image=None, price=None,
+                old_price=None, discount=None, coupon=None, posted_at="", first_seen="", last_seen="",
+                channels=["alfa"], n_posts=1)
+    return Offer(**{**base, **kw})
+
+
+def test_sconto_min():
+    r = rule("ssd", sconto_min=30)
+    assert matches(r, offerta_completa(discount=30))
+    assert matches(r, offerta_completa(discount=70))
+    assert not matches(r, offerta_completa(discount=29))
+    assert not matches(r, offerta_completa(discount=None))  # senza sconto il criterio non è verificabile
+
+
+def test_solo_coupon():
+    r = rule("ssd", solo_coupon=True)
+    assert matches(r, offerta_completa(coupon="SSD10"))
+    assert not matches(r, offerta_completa(coupon=None))
+    assert not matches(r, offerta_completa(coupon=""))
+
+
+def test_parole_opzionali():
+    r = Rule(nome="r", parole=(), prezzo_max=50)
+    assert matches(r, offerta_completa(text="qualunque cosa", price=20.0))
+    assert not matches(r, offerta_completa(text="qualunque cosa", price=80.0))
+    # escludi continua a valere anche senza parole
+    r2 = Rule(nome="r", parole=(), prezzo_max=50, escludi=(compile_keyword("cinturino"),))
+    assert not matches(r2, offerta_completa(text="cinturino per watch", price=20.0))
+
+
+def test_config_conserva_le_stringhe_sorgenti(tmp_path):
+    (tmp_path / "config.yaml").write_text(
+        "canali:\n  - {nome: a, cartella: Informatica}\n  - {nome: b, cartella: informatica}\n"
+        "regole:\n  - nome: r\n    parole: ['apple watch', '/\\bwatch\\b/']\n    escludi: [Cinturino]\n"
+        "    canali: ['@Informatica']\n", encoding="utf-8")
+    r = load_config(tmp_path / "config.yaml").regole[0]
+    assert r.parole_src == ("apple watch", "/\\bwatch\\b/")
+    assert r.escludi_src == ("Cinturino",)
+    assert r.canali_src == ("informatica",)   # normalizzata ma non espansa
+    assert r.canali == {"a", "b"}             # espansa solo qui
+
+
+@pytest.mark.parametrize("valore", [0, 100, "x", 30.5, True])
+def test_config_rifiuta_sconto_non_valido(tmp_path, valore):
+    (tmp_path / "config.yaml").write_text(
+        f"canali: [{{nome: a}}]\nregole: [{{nome: r, parole: [ssd], sconto_min: {valore!r}}}]\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="sconto_min deve essere un intero da 1 a 99"):
+        load_config(tmp_path / "config.yaml")
+
+
+def test_config_regola_senza_criteri(tmp_path):
+    (tmp_path / "config.yaml").write_text(
+        "canali: [{nome: a}]\nregole: [{nome: r, escludi: [cover]}]\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="serve almeno una parola chiave o un altro criterio"):
+        load_config(tmp_path / "config.yaml")
+
+
+def test_config_regola_con_solo_criteri_numerici(tmp_path):
+    (tmp_path / "config.yaml").write_text(
+        "canali: [{nome: a}]\nregole: [{nome: r, sconto_min: 50, solo_coupon: true}]\n", encoding="utf-8")
+    r = load_config(tmp_path / "config.yaml").regole[0]
+    assert (r.parole, r.sconto_min, r.solo_coupon) == ((), 50, True)
+
+
+def test_config_notify_senza_parole(tmp_path):
+    (tmp_path / "config.yaml").write_text(
+        "canali: [{nome: a}]\nregole: [{nome: r, prezzo_max: 10, notify: true}]\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="notify richiede almeno una parola chiave"):
+        load_config(tmp_path / "config.yaml")
+
+
+@pytest.mark.parametrize("valore, errore", [(0, True), (1, False)])
+def test_config_dashboard_max_offerte(tmp_path, valore, errore):
+    (tmp_path / "config.yaml").write_text(
+        f"parametri: {{dashboard_max_offerte: {valore}}}\ncanali: [{{nome: a}}]\n"
+        "regole: [{nome: r, parole: [ssd]}]\n", encoding="utf-8")
+    if errore:
+        with pytest.raises(ConfigError, match="dashboard_max_offerte"):
+            load_config(tmp_path / "config.yaml")
+    else:
+        assert load_config(tmp_path / "config.yaml").parametri.dashboard_max_offerte == 1

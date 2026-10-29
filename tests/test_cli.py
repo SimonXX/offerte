@@ -6,8 +6,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+from datetime import datetime, timezone
+
 from offerte.cli import main
 from offerte.fetch import RunSummary
+from offerte.store import Store
 
 RADICE = Path(__file__).resolve().parents[1]
 
@@ -96,6 +99,32 @@ def test_prova(cfg, capsys, monkeypatch):
 def test_prova_fonte_sconosciuta(cfg, capsys):
     assert main(["-c", cfg, "prova", "boh"]) == 2
     assert "non in config" in capsys.readouterr().err
+
+
+def popola(tmp_path, **offerte):
+    adesso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with Store(tmp_path / "var" / "offerte.sqlite") as store:
+        for titolo, (prezzo, sconto, coupon) in offerte.items():
+            store.insert_offer(key=titolo, title=titolo, text=f"{titolo} in offerta", link=None, permalink="p",
+                               image=None, price=prezzo, old_price=None, discount=sconto, coupon=coupon,
+                               posted_at=adesso, channel="finta", now=adesso)
+
+
+def test_filtra_con_soli_criteri_numerici(cfg, tmp_path, capsys):
+    popola(tmp_path, scontata=(50.0, 40, "ABC10"), senza_coupon=(50.0, 40, None), poco_scontata=(50.0, 10, "ABC10"))
+    assert main(["-c", cfg, "filtra", "--sconto-min", "30", "--solo-coupon"]) == 0
+    out = capsys.readouterr().out
+    assert "scontata" in out and "senza_coupon" not in out and "poco_scontata" not in out
+
+
+def test_filtra_senza_criteri(cfg, capsys):
+    assert main(["-c", cfg, "filtra"]) == 2
+    assert "serve almeno una parola chiave o un altro criterio" in capsys.readouterr().err
+
+
+def test_filtra_sconto_min_fuori_scala(cfg, capsys):
+    assert main(["-c", cfg, "filtra", "--sconto-min", "0"]) == 2
+    assert "intero da 1 a 99" in capsys.readouterr().err
 
 
 def test_estratto_di_config_nel_readme():

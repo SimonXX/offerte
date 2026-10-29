@@ -20,6 +20,10 @@ class ConfigError(Exception):
     pass
 
 
+CRITERI_REGOLA = ("serve almeno una parola chiave o un altro criterio"
+                  " (prezzo_min, prezzo_max, sconto_min, solo_coupon, canali)")
+
+
 @dataclass(frozen=True)
 class Rule:
     nome: str
@@ -30,6 +34,13 @@ class Rule:
     tutte: bool = False  # True: servono tutte le parole, non una sola
     escludi: tuple[re.Pattern[str], ...] = ()  # una sola di queste nel testo e la regola non scatta
     prezzo_min: float | None = None
+    sconto_min: int | None = None  # percentuale minima; un'offerta senza sconto non passa
+    solo_coupon: bool = False
+    # Le stringhe come sono scritte in config: le regex compilate non si possono rileggere, e la dashboard
+    # deve poter mostrare la regola e riprodurla nei propri filtri.
+    parole_src: tuple[str, ...] = ()
+    escludi_src: tuple[str, ...] = ()
+    canali_src: tuple[str, ...] = ()  # nomi di canale o di cartella, non espansi
 
 
 @dataclass(frozen=True)
@@ -46,6 +57,9 @@ class Params:
     giorni_ritenzione: int = 90
     http_host: str = "127.0.0.1"
     http_port: int = 8099
+    dashboard: bool = True
+    dashboard_regole: bool = True
+    dashboard_max_offerte: int = 10000
 
 
 @dataclass(frozen=True)
@@ -113,7 +127,12 @@ def load_config(path: Path | str) -> Config:
         giorni_ritenzione=int(raw.get("giorni_ritenzione", 90)),
         http_host=str(raw.get("http_host", "127.0.0.1")),
         http_port=int(raw.get("http_port", 8099)),
+        dashboard=bool(raw.get("dashboard", True)),
+        dashboard_regole=bool(raw.get("dashboard_regole", True)),
+        dashboard_max_offerte=int(raw.get("dashboard_max_offerte", 10000)),
     )
+    if params.dashboard_max_offerte < 1:
+        raise ConfigError("parametri: dashboard_max_offerte deve essere almeno 1")
 
     _check_keys("config", data, {"canali", "fonti", "regole", "parametri"})
     from .sources import crea_fonte  # import ritardato: sources importa ConfigError da qui
@@ -141,11 +160,23 @@ def load_config(path: Path | str) -> Config:
     for i, rr in enumerate(data.get("regole") or []):
         if not isinstance(rr, dict) or not rr.get("nome"):
             raise ConfigError(f"regole[{i}]: serve almeno 'nome'")
-        _check_keys(f"regole[{i}]", rr, {"nome", "parole", "prezzo_max", "prezzo_min", "canali", "notify", "tutte", "escludi"})
+        _check_keys(f"regole[{i}]", rr, {"nome", "parole", "prezzo_max", "prezzo_min", "canali", "notify", "tutte",
+                                         "escludi", "sconto_min", "solo_coupon"})
         nome = str(rr["nome"]).strip()
         parole = [str(p) for p in _as_list(rr.get("parole"))]
-        if not parole:
-            raise ConfigError(f"regola '{nome}': nessuna parola chiave")
+        sconto_min = rr.get("sconto_min")
+        if sconto_min is not None and (isinstance(sconto_min, bool) or not isinstance(sconto_min, int)
+                                       or not 1 <= sconto_min <= 99):
+            raise ConfigError(f"regola '{nome}': sconto_min deve essere un intero da 1 a 99")
+        solo_coupon = bool(rr.get("solo_coupon", False))
+        altri_criteri = any(rr.get(k) is not None for k in ("prezzo_min", "prezzo_max", "canali")) or solo_coupon \
+            or sconto_min is not None
+        if not parole and not altri_criteri:
+            raise ConfigError(f"regola '{nome}': {CRITERI_REGOLA}")
+        if not parole and bool(rr.get("notify", False)):
+            # Una regola senza parole corrisponde a tutto ciò che passa i criteri numerici: con notify
+            # sarebbe una raffica di notifiche a ogni giro.
+            raise ConfigError(f"regola '{nome}': notify richiede almeno una parola chiave")
         try:
             compiled = tuple(compile_keyword(p) for p in parole)
             escludi = tuple(compile_keyword(str(p)) for p in _as_list(rr.get("escludi")))
@@ -154,8 +185,8 @@ def load_config(path: Path | str) -> Config:
         prezzo_max = rr.get("prezzo_max")
         prezzo_min = rr.get("prezzo_min")
         selezione: set[str] = set()
-        for voce in _as_list(rr.get("canali")):
-            voce = str(voce).strip().lstrip("@").lower()
+        canali_src = tuple(str(voce).strip().lstrip("@").lower() for voce in _as_list(rr.get("canali")))
+        for voce in canali_src:
             if voce in nomi:
                 selezione.add(voce)
             elif voce in per_cartella:
@@ -171,6 +202,11 @@ def load_config(path: Path | str) -> Config:
             tutte=bool(rr.get("tutte", False)),
             escludi=escludi,
             prezzo_min=None if prezzo_min is None else float(prezzo_min),
+            sconto_min=sconto_min,
+            solo_coupon=solo_coupon,
+            parole_src=tuple(parole),
+            escludi_src=tuple(str(p) for p in _as_list(rr.get("escludi"))),
+            canali_src=canali_src,
         ))
     if len({r.nome for r in regole}) != len(regole):
         raise ConfigError("regole con lo stesso nome")

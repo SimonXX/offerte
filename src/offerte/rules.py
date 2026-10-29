@@ -1,4 +1,4 @@
-"""Regole di alert: parole chiave (parola intera o regex), prezzo massimo, canali."""
+"""Regole di alert: parole chiave (parola intera o regex), prezzo, sconto minimo, coupon, canali."""
 
 from __future__ import annotations
 
@@ -13,8 +13,14 @@ def matches(rule: Rule, offer: Offer) -> bool:
         return False
     if rule.prezzo_min is not None and (offer.price is None or offer.price < rule.prezzo_min):
         return False
+    if rule.sconto_min is not None and (offer.discount is None or offer.discount < rule.sconto_min):
+        return False
+    if rule.solo_coupon and not offer.coupon:
+        return False
     if any(p.search(offer.text) for p in rule.escludi):
         return False
+    if not rule.parole:  # una regola può avere solo criteri numerici: allora vale per tutto il resto
+        return True
     hits = (p.search(offer.text) is not None for p in rule.parole)
     return all(hits) if rule.tutte else any(hits)
 

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import __version__
-from .config import Config, ConfigError, Rule, compile_keyword, load_config
+from .config import CRITERI_REGOLA, Config, ConfigError, Rule, compile_keyword, load_config
 from .extract import extract
 from .feeds import fmt_price
 from .fetch import run_fetch
@@ -60,9 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--limite", type=int, default=20)
 
     p = sub.add_parser("filtra", help="prova una regola al volo sulle offerte salvate, senza toccare la config")
-    p.add_argument("parole", nargs="+", help="parole chiave (parola intera o /regex/), come in config")
+    p.add_argument("parole", nargs="*", help="parole chiave (parola intera o /regex/), come in config")
     p.add_argument("--prezzo-max", type=float)
     p.add_argument("--prezzo-min", type=float)
+    p.add_argument("--sconto-min", type=int, metavar="N", help="sconto minimo in percentuale (1-99)")
+    p.add_argument("--solo-coupon", action="store_true", help="solo le offerte con un coupon")
     p.add_argument("--escludi", nargs="*", default=[], help="parole che annullano la corrispondenza")
     p.add_argument("--tutte", action="store_true", help="servono tutte le parole, non una sola")
     p.add_argument("--canali", nargs="*", default=[], help="nomi di canale o di cartella")
@@ -203,10 +205,18 @@ def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
     for voce in args.canali:
         voce = voce.lower().lstrip("@")
         canali |= set(cartelle.get(voce, [voce]))
+    if not args.parole and not (args.prezzo_min is not None or args.prezzo_max is not None
+                                or args.sconto_min is not None or args.solo_coupon or canali):
+        print(f"filtra: {CRITERI_REGOLA}", file=sys.stderr)
+        return 2
+    if args.sconto_min is not None and not 1 <= args.sconto_min <= 99:
+        print("filtra: --sconto-min vuole un intero da 1 a 99", file=sys.stderr)
+        return 2
     try:
         rule = Rule(nome="filtra", parole=tuple(compile_keyword(p) for p in args.parole),
                     prezzo_max=args.prezzo_max, prezzo_min=args.prezzo_min, canali=frozenset(canali),
-                    tutte=args.tutte, escludi=tuple(compile_keyword(p) for p in args.escludi))
+                    tutte=args.tutte, escludi=tuple(compile_keyword(p) for p in args.escludi),
+                    sconto_min=args.sconto_min, solo_coupon=args.solo_coupon)
     except Exception as e:  # noqa: BLE001 (re.error e simili: messaggio all'utente, non traceback)
         print(f"regola non valida: {e}", file=sys.stderr)
         return 2
