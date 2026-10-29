@@ -476,6 +476,11 @@ standard non costano nulla; lo stato SQLite vive su un branch orfano `data` con 
 5. I feed sono su `https://<utente>.github.io/<repo>/`, ad esempio
    `https://<utente>.github.io/<repo>/cartella/casa.xml`: in Inoreader, Add subscription, incolla l'URL.
 
+Se semini il branch `data` con uno stato già pronto (`./deploy/stato.sh save`), fallo **dopo** il primo push di
+`main`: su un repository vuoto il primo branch spinto diventa quello predefinito, e le esecuzioni pianificate si
+registrano solo dal predefinito. Se ti capita, si corregge con
+`gh api --method PATCH repos/<utente>/<repo> -f default_branch=main`.
+
 `feed_base_url` viene impostata dal workflow tramite la variabile `OFFERTE_FEED_BASE_URL`, che ha la precedenza sulla
 config. Il cron di GitHub parte al minimo ogni 5 minuti e può slittare di qualche minuto nei momenti di carico; dopo
 60 giorni senza attività GitHub spegne i cron, e il workflow si riabilita da solo a ogni giro per evitarlo. Per

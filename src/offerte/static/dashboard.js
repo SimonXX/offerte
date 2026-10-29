@@ -303,21 +303,21 @@
   // --- stato delle fonti ---------------------------------------------------
 
   function saluteFonte(f) {
-    if (!f.attiva) { return {classe: "punto", testo: "inattiva", problema: false}; }
+    if (!f.attiva) { return {tipo: "inattiva", classe: "punto", testo: "inattiva"}; }
     if (f.stato === "error" || f.stato === "no_preview") {
-      return {classe: "punto punto-errore", testo: "errore", problema: true};
+      return {tipo: "errore", classe: "punto punto-errore", testo: "errore"};
     }
-    if (f.stato === "vuota") { return {classe: "punto punto-attesa", testo: "vuota", problema: true}; }
+    if (f.stato === "vuota") { return {tipo: "vuota", classe: "punto punto-attesa", testo: "vuota"}; }
     if (f.ultimo_fetch === undefined || f.ultimo_fetch === null) {
-      return {classe: "punto", testo: "mai letta", problema: false};
+      return {tipo: "mai", classe: "punto", testo: "mai letta"};
     }
     var fermo = Math.floor(Date.now() / 1000) - f.ultimo_fetch;
     var soglia = Math.max(45 * 60, (f.ogni || 0) * 60 * 3);
     if (fermo > soglia) {
-      return {classe: "punto punto-attesa", testo: "ferma da " + quandoRelativo(f.ultimo_fetch).replace(" fa", ""),
-              problema: true};
+      return {tipo: "ferma", classe: "punto punto-attesa",
+              testo: "ferma da " + quandoRelativo(f.ultimo_fetch).replace(" fa", "")};
     }
-    return {classe: "punto punto-ok", testo: "ok, " + quandoRelativo(f.ultimo_fetch), problema: false};
+    return {tipo: "ok", classe: "punto punto-ok", testo: "ok, " + quandoRelativo(f.ultimo_fetch)};
   }
 
   function mostraFonti() {
@@ -327,19 +327,46 @@
       return;
     }
     DOM.statoFonti.hidden = false;
-    var problemi = 0;
+    var salute = fonti.map(saluteFonte);
+    var attive = salute.filter(function (s) { return s.tipo !== "inattiva"; }).length;
+    var rotte = salute.filter(function (s) { return s.tipo === "errore" || s.tipo === "vuota"; }).length;
+    var ferme = salute.filter(function (s) { return s.tipo === "ferma"; }).length;
+    // Se sono ferme tutte e nessuna è in errore, il guasto è uno solo: la raccolta non gira.
+    // Dirlo 23 volte come se fossero 23 fonti rotte è fuorviante.
+    var raccoltaFerma = rotte === 0 && ferme > 0 && ferme === attive;
+    var ultimo = 0;
     fonti.forEach(function (f) {
-      var salute = saluteFonte(f);
-      if (salute.problema) { problemi += 1; }
+      if (f.ultimo_fetch && f.ultimo_fetch > ultimo) { ultimo = f.ultimo_fetch; }
+    });
+
+    fonti.forEach(function (f, i) {
+      var s = salute[i];
+      var testo = s.testo;
+      var classe = s.classe;
+      if (raccoltaFerma && s.tipo === "ferma") {
+        testo = "ok, " + quandoRelativo(f.ultimo_fetch);  // la fonte sta bene, è il giro che manca
+        classe = "punto punto-ok";
+      }
       var riga = crea("li");
-      var punto = crea("span", salute.classe);
+      var punto = crea("span", classe);
       punto.setAttribute("aria-hidden", "true");
       riga.appendChild(punto);
-      riga.appendChild(document.createTextNode(f.nome + ", " + salute.testo));
+      riga.appendChild(document.createTextNode(f.nome + ", " + testo));
       DOM.elencoFonti.appendChild(riga);
     });
-    DOM.statoFontiTitolo.textContent = "Fonti (" + problemi + " con " +
-      plurale(problemi, "problema", "problemi") + ")";
+
+    if (rotte) {
+      DOM.statoFontiTitolo.textContent = "Fonti (" + rotte + " con " +
+        plurale(rotte, "problema", "problemi") + ")";
+    } else if (raccoltaFerma) {
+      DOM.statoFontiTitolo.textContent = "Raccolta ferma da " +
+        quandoRelativo(ultimo).replace(" fa", "") + ", nessuna fonte in errore";
+    } else if (ferme) {
+      DOM.statoFontiTitolo.textContent = "Fonti (" + ferme + " " +
+        plurale(ferme, "ferma", "ferme") + ")";
+    } else {
+      DOM.statoFontiTitolo.textContent = "Fonti (" + attive + ", tutte ok)";
+    }
   }
 
   function mostraAvvisi() {

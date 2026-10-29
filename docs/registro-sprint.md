@@ -724,3 +724,46 @@ di `dashboard_regole` con `attiva: false`.
 La prima scrittura degli esempi ha usato `s.index("regole:")`, che ha trovato `dashboard_regole:` nel blocco
 dei parametri e ha troncato il file da lì in poi, cancellando `canali:`. Ripristinato con `git checkout` e
 rifatto con un ancoraggio `^regole:$`. Il controllo che l'ha intercettato è stato `load_config`, non i test.
+
+## S12, raccolta ferma contro fonti rotte
+
+Data: 29 ottobre 2026.
+
+### Il difetto
+
+Appena online, la dashboard diceva «Fonti (23 con problemi)» ed elencava tutte e 23 le fonti come «ferma da
+55 min», mentre lo stato di ognuna era `ok`. Il fatto era uno solo, ripetuto ventitré volte: da 55 minuti non
+girava nessuna raccolta. Un guasto globale presentato come ventitré guasti locali manda a cercare nel posto
+sbagliato.
+
+### Cosa è stato fatto
+
+`saluteFonte` restituisce ora un `tipo` (`ok`, `inattiva`, `mai`, `ferma`, `errore`, `vuota`) invece di un
+booleano `problema`, e `mostraFonti` decide la presentazione guardando l'insieme: se nessuna fonte è in errore
+e sono ferme **tutte** quelle attive, il titolo diventa «Raccolta ferma da N, nessuna fonte in errore» e le
+singole righe tornano verdi con l'ora dell'ultima lettura, perché la fonte sta bene. Restano «Fonti (N con
+problemi)» quando qualcuna è davvero rotta, «Fonti (N ferme)» quando sono solo alcune, e «Fonti (N, tutte ok)»
+quando va tutto.
+
+### Causa reale del fermo
+
+Una sola esecuzione, quella del push. Il cron non era partito perché al momento del push il branch predefinito
+del repository era `data`: `deploy/stato.sh save` lo aveva spinto per primo su un repository vuoto e GitHub lo
+aveva eletto predefinito. Le esecuzioni pianificate si registrano dal branch predefinito, che non conteneva il
+workflow. Corretto con `gh api --method PATCH repos/SimonXX/offerte -f default_branch=main`.
+
+**Da ricordare per il prossimo deploy da zero**: spingere `main` prima di seminare il branch `data`, oppure
+correggere subito il branch predefinito. Vale la pena scriverlo nel README.
+
+### Test
+
+314 prima, **315 dopo**: controllo statico che la distinzione fra raccolta ferma e fonti rotte esista nel
+sorgente.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 315 passed in 35,5 s |
+| Chrome sulla dashboard con dati di un'ora fa | «Raccolta ferma da 1 h, nessuna fonte in errore», zero punti di avviso |
+| `gh run list` | una sola esecuzione da push, cron non ancora agganciato |

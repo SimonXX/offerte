@@ -182,3 +182,11 @@ def test_grafico_caricato_solo_a_richiesta():
     assert 'd.classList.contains("storico")' in js and 'if (d.querySelector("img")) { return; }' in js
     assert "dati.grafico" in js and "https://" not in js   # l'indirizzo arriva dai dati, non dal sorgente
     assert 'img.referrerPolicy = "no-referrer"' in js
+
+
+def test_raccolta_ferma_non_e_ventitre_fonti_rotte():
+    """Se nessuna fonte e' in errore e sono tutte ferme, il guasto e' uno solo: va detto una volta."""
+    js = sorgente("dashboard.js")
+    assert "var raccoltaFerma = rotte === 0 && ferme > 0 && ferme === attive;" in js
+    assert '"Raccolta ferma da "' in js
+    assert '", tutte ok)"' in js
