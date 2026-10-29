@@ -143,6 +143,7 @@ Voce di `offerte`, tutti i campi da `Offer` (`store.py:66-83`):
 | `u` | str | primo fra `o.link` e `o.permalink` che passa `safe_url` | omesso se nessuno passa |
 | `m` | str | `o.permalink` se passa `safe_url` ed è diverso da `u` (come `feeds.py:59`) | altrimenti omesso |
 | `i` | str | `o.image` se passa `safe_url` | altrimenti omesso |
+| `a` | str | ASIN estratto dalla chiave `url:amazon.<tld>/dp/<ASIN>` | omesso se la chiave non è un prodotto Amazon |
 
 `x` deve essere completo perché le regole valutano il testo intero (`rules.py:16-18`) e la parità con le regole dipende da questo. I prezzi non si arrotondano: il JS deve confrontare gli stessi float che vede `rules.matches`. `safe_url(u)` accetta solo `http:` e `https:` e restituisce `None` per `javascript:`, `data:`, `file:`, schema assente o stringa vuota. Nel JS un campo assente si legge sempre come `o.p == null`, mai come falsy, perché `0` è un prezzo valido per `pmin`.
 
@@ -518,7 +519,7 @@ Aggiornati a ogni rendering, senza effetti sul comportamento:
 | n. | criterio | verifica |
 |:--|:--|:--|
 | A1 | I 73 test esistenti passano senza modificare le loro asserzioni; tutti i test nuovi passano | `uv run pytest -q` |
-| A2 | `dashboard.json` ha esattamente le chiavi `v generato finestra_giorni troncato cartelle regole fonti offerte`; ogni offerta ha solo chiavi ammesse e i tipi del contratto | `test_contratto_offerta`, `test_head_e_tipi` |
+| A2 | `dashboard.json` ha le chiavi `v generato finestra_giorni troncato cartelle regole fonti offerte`, più `grafico` se `grafico_prezzi` non è vuoto; ogni offerta ha solo chiavi ammesse e i tipi del contratto | `test_contratto_offerta`, `test_head_e_tipi` |
 | A3 | Il file non contiene mai il valore `null` (ricerca ricorsiva e sul testo) | `test_nessun_null` |
 | A4 | Offerte ordinate per `(t, id)` decrescente indipendentemente dall'ordine di lettura dal DB; escluse quelle fuori da `feed_giorni` | `test_ordine_e_finestra` |
 | A5 | Con `dashboard_max_offerte = 2` restano le 2 più recenti e `troncato` è `true` | `test_troncamento` |

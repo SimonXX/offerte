@@ -15,6 +15,7 @@ parametri:
   dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
   # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
+  # grafico_prezzi: ""            # vuoto = niente grafico dello storico prezzi nelle schede
 
 canali:
   # Verificati il 28.10.2026: anteprima pubblica attiva e post recenti. Volume indicativo in messaggi al giorno.

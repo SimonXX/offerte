@@ -174,3 +174,11 @@ def test_interruttore_parola_intera():
     assert "stato.pi = true;" in js   # una regola di config vale come parola intera
     html = sorgente("dashboard.html")
     assert '<input type="checkbox" id="parola-intera">' in html
+
+
+def test_grafico_caricato_solo_a_richiesta():
+    """L'immagine di terzi si crea all'apertura della scheda, non al rendering delle 60 schede."""
+    js = sorgente("dashboard.js")
+    assert 'd.classList.contains("storico")' in js and 'if (d.querySelector("img")) { return; }' in js
+    assert "dati.grafico" in js and "https://" not in js   # l'indirizzo arriva dai dati, non dal sorgente
+    assert 'img.referrerPolicy = "no-referrer"' in js

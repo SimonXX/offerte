@@ -583,6 +583,15 @@
     }
     if (azioni.childNodes.length) { corpo.appendChild(azioni); }
 
+    if (o.a && dati.grafico) {
+      // Lo storico prezzi si carica solo quando apri la scheda: niente richieste a terzi per 60 schede.
+      var storico = document.createElement("details");
+      storico.className = "storico";
+      storico.setAttribute("data-asin", o.a);
+      storico.appendChild(crea("summary", null, "Storico prezzi"));
+      corpo.appendChild(storico);
+    }
+
     var dettagli = document.createElement("details");
     dettagli.appendChild(crea("summary", null, "Testo"));
     dettagli.appendChild(crea("pre", "testo-originale", o.x || ""));
@@ -855,6 +864,22 @@
       if (ev.target.parentNode && ev.target.parentNode.classList) {
         ev.target.parentNode.classList.add("senza-foto");
       }
+    }, true);
+    DOM.elenco.addEventListener("toggle", function (ev) {
+      var d = ev.target;
+      if (!d || !d.open || !d.classList || !d.classList.contains("storico")) { return; }
+      if (d.querySelector("img")) { return; }
+      var indirizzo = urlSicuro(dati.grafico + encodeURIComponent(d.getAttribute("data-asin")));
+      if (!indirizzo) { return; }
+      var img = document.createElement("img");
+      img.className = "grafico";
+      img.src = indirizzo;
+      img.alt = "Andamento del prezzo su Amazon negli ultimi dodici mesi";
+      img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
+      img.width = 500;
+      img.height = 200;
+      d.appendChild(img);
     }, true);
     DOM.altre.addEventListener("click", function () {
       mostrate += PAGINA;

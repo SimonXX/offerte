@@ -634,3 +634,52 @@ mista) con Python come oracolo.
 La specifica §3.2 e §3.4 descrivevano `compilaVoce(voce)` con la sola semantica di parola intera, speculare a
 `compile_keyword`. Ora la semantica dipende da `pi` e la specifica va aggiornata in quei due punti: **non ancora
 fatto**, è il primo lavoro del prossimo giro.
+
+## S10, storico prezzi a richiesta
+
+Data: 29 ottobre 2026.
+
+### Due meccanismi verificati prima di scrivere codice
+
+`https://t.me/s/<canale>?q=<termine>` esiste e funziona: la ricerca interna di un canale restituisce quindici
+messaggi per pagina, pagina con `&before=<id>` e pesca messaggi che la raccolta incrementale non ha mai
+scaricato. Provato su `rafficaffari` con «dyson»: risultati fino a luglio 2025 in una sola richiesta.
+
+`https://graph.keepa.com/pricehistory.png?asin=<ASIN>&domain=it&range=365` restituisce un PNG 500x200 con il
+grafico reale del prezzo Amazon degli ultimi dodici mesi, senza chiave API e senza costo. Verificato su
+`B0F1Z5982Y`: grafico leggibile con titolo, curva Amazon e curva New.
+
+### Cosa è stato fatto
+
+`search_channel_messages(client, channel, query, max_pages)` in `sources/telegram.py`, e il sottocomando
+`offerte storico <termine> [--canali ...] [--pagine N]`: interroga la ricerca di ogni canale Telegram attivo,
+estrae prezzo, titolo e link con la pipeline di sempre, e stampa la serie ordinata per data con minimo, massimo
+e ultimo prezzo. Su «dyson v15» ha trovato 16 messaggi in 4 canali dal **11/11/2021** al 27/10/2026.
+
+Nella dashboard, ogni scheda di un prodotto Amazon ha un `<details>` «Storico prezzi» che carica il grafico
+**solo all'apertura**: con 60 schede in pagina non parte nessuna richiesta a terzi finché non clicchi. L'ASIN
+arriva nel nuovo campo `a` della voce, estratto dalla chiave di dedupe; l'indirizzo del grafico arriva nel nuovo
+campo di testa `grafico`, che viene dal parametro `grafico_prezzi`. Vuoto, la funzione sparisce.
+
+L'indirizzo sta nei dati e non nel sorgente JavaScript, così il controllo A27 (nessun `https://` nei file
+statici) resta valido ed è il parametro, non il codice, a decidere quale servizio interrogare.
+
+### Test
+
+307 prima, **311 dopo** (+4): ASIN presente solo per le chiavi Amazon (quattro chiavi non Amazon verificate),
+campo `grafico` presente e assente, `grafico_prezzi: ""` letto dalla config, e il controllo che l'immagine si
+crei all'apertura e non al rendering.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 311 passed in 36,6 s |
+| controllo trattini | nessuna riga |
+| `offerte storico "dyson v15" --canali raffica informatica --pagine 1` | 16 messaggi, 4 canali, dal 2021 |
+| Chrome su `?q=asus` | 23 schede con «Storico prezzi», **0** immagini caricate prima del clic |
+
+### Nota di riservatezza
+
+Aprire il grafico comunica al servizio quale prodotto si sta guardando. La pagina manda `no-referrer`, quindi
+non comunica da dove, e la richiesta parte solo al clic. Si spegne con `grafico_prezzi: ""`.

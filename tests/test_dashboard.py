@@ -17,7 +17,7 @@ from offerte.store import Offer, Store
 
 NOW = datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc)
 CHIAVI_TESTA = ["v", "generato", "finestra_giorni", "troncato", "cartelle", "regole", "fonti", "offerte"]
-CHIAVI_OFFERTA = {"id", "t", "n", "x", "k", "p", "b", "s", "c", "u", "m", "i"}
+CHIAVI_OFFERTA = {"id", "t", "n", "x", "k", "p", "b", "s", "c", "u", "m", "i", "a"}
 
 
 def offerta(**kw) -> Offer:
@@ -312,3 +312,31 @@ def test_aiuto_spiega_la_ricerca_dentro_le_parole():
     assert 'id="parola-intera"' in html and 'id="riga-parola-intera"' in html
     aiuto = html.split('id="aiuto-q"', 1)[1].split("</p>", 1)[0]
     assert "dentro le parole" in aiuto and "Solo parola intera" in aiuto
+
+
+# --- storico prezzi a richiesta ------------------------------------------
+
+def test_asin_nella_voce_solo_per_amazon():
+    """L'ASIN serve al grafico dello storico: c'e' solo quando la chiave e' un prodotto Amazon."""
+    assert dashboard_offerta(offerta(key="url:amazon.it/dp/B0B97V9BH5"))["a"] == "B0B97V9BH5"
+    assert dashboard_offerta(offerta(key="url:amazon.de/dp/B0DYJMXWM5"))["a"] == "B0DYJMXWM5"
+    for chiave in ("url:amazon.it/itm/123", "url:ebay.it/itm/1", "text:abc", ""):
+        assert "a" not in dashboard_offerta(offerta(key=chiave)), chiave
+
+
+def test_grafico_nella_testa(tmp_path):
+    config = config_demo(tmp_path)
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store, grafico=config.parametri.grafico_prezzi)
+    assert doc["grafico"].endswith("asin=")
+    # vuoto significa niente grafico: la chiave sparisce, la pagina non contatta nessuno
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store, grafico="")
+    assert "grafico" not in doc
+
+
+def test_grafico_si_puo_spegnere(tmp_path):
+    (tmp_path / "spento.yaml").write_text(
+        "parametri: {grafico_prezzi: ''}\ncanali: [{nome: a}]\nregole: [{nome: r, parole: [ssd]}]\n",
+        encoding="utf-8")
+    assert load_config(tmp_path / "spento.yaml").parametri.grafico_prezzi == ""

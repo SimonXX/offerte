@@ -22,6 +22,7 @@ MIME = {".png": "image/png", ".webp": "image/webp", ".gif": "image/gif"}
 STATIC = Path(__file__).parent / "static"
 DASHBOARD_VERSIONE = 1
 DASHBOARD_ASSET = ("dashboard.html", "dashboard.css", "filtri.js", "dashboard.js")
+ASIN_CHIAVE_RE = re.compile(r"^url:amazon\.[a-z.]+/dp/([A-Z0-9]{10})$")
 
 
 def slug(name: str) -> str:
@@ -208,11 +209,14 @@ def dashboard_offerta(o: Offer) -> dict:
     immagine = safe_url(o.image)
     if immagine:
         voce["i"] = immagine
+    asin = ASIN_CHIAVE_RE.match(o.key or "")
+    if asin:
+        voce["a"] = asin.group(1)  # serve al grafico dello storico prezzi, caricato a richiesta
     return voce
 
 
 def dashboard_bytes(offers: list[Offer], cartelle: dict[str, list[str]], regole: list[dict], fonti: list[dict],
-                    now: datetime, giorni: int, max_offerte: int = 10000) -> bytes:
+                    now: datetime, giorni: int, max_offerte: int = 10000, grafico: str = "") -> bytes:
     """Il documento `dashboard.json`. Pura: niente disco, niente store, così si prova a mano."""
     ordinate = sorted(offers, key=lambda o: (_epoch(o.posted_at) or 0, o.id), reverse=True)
     doc = {
@@ -225,6 +229,8 @@ def dashboard_bytes(offers: list[Offer], cartelle: dict[str, list[str]], regole:
         "fonti": fonti,
         "offerte": [dashboard_offerta(o) for o in ordinate[:max_offerte]],
     }
+    if grafico:
+        doc["grafico"] = grafico
     return json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
@@ -249,7 +255,7 @@ def write_dashboard(store: Store, config: Config, now: datetime) -> int:
     offers = store.offers_since(since)
     dati = dashboard_bytes(
         offers, dashboard_cartelle(config), dashboard_regole(config) if p.dashboard_regole else [],
-        dashboard_fonti(config, store), now, giorni, p.dashboard_max_offerte)
+        dashboard_fonti(config, store), now, giorni, p.dashboard_max_offerte, p.grafico_prezzi)
     for nome in DASHBOARD_ASSET:
         _copia_se_diverso(STATIC / nome, base / nome)
     _atomic_write(base / "dashboard.json", dati)  # per ultimo: la pagina non deve mai leggere dati più vecchi di sé

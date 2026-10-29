@@ -6,6 +6,7 @@ import argparse
 import fcntl
 import logging
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -15,12 +16,13 @@ from .config import CRITERI_REGOLA, Config, ConfigError, Rule, compile_keyword, 
 from .extract import extract
 from .feeds import fmt_price, write_feeds
 from .fetch import run_fetch
-from .http import Client
+from .http import Client, FetchError
 from .log import setup_logging
 from .notify import Notifier, load_env
 from .links import pick_offer_link
 from .rules import matches
 from .serve import serve
+from .sources.telegram import NoPreview, search_channel_messages
 from .sources.base import FetchContext
 from .store import SourceState, Store
 
@@ -44,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--port", type=int, help="default: parametri.http_port (8099)")
 
     sub.add_parser("feed", help="rigenera feed e dashboard dal database, senza leggere i canali")
+
+    p = sub.add_parser("storico", help="cerca un prodotto nell'archivio dei canali, anche anni indietro")
+    p.add_argument("termine", help="testo da cercare, per esempio un modello o un ASIN")
+    p.add_argument("--canali", nargs="*", default=[], help="solo questi canali o cartelle")
+    p.add_argument("--pagine", type=int, default=3, help="pagine di risultati per canale (15 per pagina)")
 
     p = sub.add_parser("search", help="cerca una parola nel testo e nel titolo delle offerte")
     p.add_argument("parola")
@@ -109,6 +116,59 @@ def cmd_feed(args: argparse.Namespace, config: Config) -> int:
     with Store(p.var_dir / "offerte.sqlite") as store:
         scritti = write_feeds(store, config, datetime.now(timezone.utc))
     print(f"scritti {len(scritti)} feed in {p.var_dir / 'feeds'}")
+    return 0
+
+
+def cmd_storico(args: argparse.Namespace, config: Config) -> int:
+    """Interroga la ricerca di t.me canale per canale: è l'unico modo di vedere i prezzi di mesi fa."""
+    cartelle = {k.lower(): v for k, v in config.cartelle().items()}
+    scelti: set[str] = set()
+    for voce in args.canali:
+        voce = voce.lower().lstrip("@")
+        scelti |= set(cartelle.get(voce, [voce]))
+    fonti = [f for f in config.fonti_attive()
+             if f.tipo == "telegram" and (not scelti or f.nome in scelti)]
+    if not fonti:
+        print("nessun canale Telegram corrisponde", file=sys.stderr)
+        return 2
+
+    p = config.parametri
+    trovate: list[tuple] = []
+    with Client(p.user_agent, p.intervallo_cortesia) as client:
+        for fonte in fonti:
+            try:
+                messaggi = search_channel_messages(client, fonte.canale, args.termine, max_pages=args.pagine)
+            except NoPreview:
+                log.warning("canale %s: nessuna anteprima pubblica", fonte.nome)
+                continue
+            except FetchError as e:
+                log.error("canale %s: %s", fonte.nome, e)
+                continue
+            for m in messaggi:
+                ex = extract(m.text, m.struck)
+                trovate.append((m.date, ex.price, fonte.nome, ex.title or m.text.splitlines()[0][:60],
+                                pick_offer_link(m.links) or m.permalink))
+
+    if not trovate:
+        print(f"nessun messaggio con '{args.termine}' nei {len(fonti)} canali interrogati")
+        return 0
+    trovate.sort(key=lambda r: r[0])
+    for quando, prezzo, canale, titolo, link in trovate:
+        print(f"{quando:%Y-%m-%d}  {(fmt_price(prezzo) if prezzo is not None else '-'):>10}  "
+              f"{canale:<24}{titolo[:52]:<54}{link}")
+
+    prezzi = [r[1] for r in trovate if r[1] is not None]
+    print(f"\n{len(trovate)} messaggi in {len({r[2] for r in trovate})} canali, "
+          f"dal {trovate[0][0]:%d/%m/%Y} al {trovate[-1][0]:%d/%m/%Y}")
+    if prezzi:
+        minimo = min(prezzi)
+        quando_min = next(r[0] for r in trovate if r[1] == minimo)
+        print(f"prezzo: minimo {fmt_price(minimo)} il {quando_min:%d/%m/%Y}, massimo {fmt_price(max(prezzi))}, "
+              f"ultimo {fmt_price(trovate[-1][1]) if trovate[-1][1] is not None else '-'}")
+    asin = next((m.group(1) for _, _, _, _, link in trovate
+                 if (m := re.search(r"/dp/([A-Z0-9]{10})", link or ""))), None)
+    if asin and config.parametri.grafico_prezzi:
+        print(f"grafico Amazon: {config.parametri.grafico_prezzi}{asin}")
     return 0
 
 
@@ -241,7 +301,8 @@ def cmd_filtra(args: argparse.Namespace, config: Config) -> int:
 
 
 COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "feed": cmd_feed, "search": cmd_search, "stats": cmd_stats,
-            "filtra": cmd_filtra, "fonti": cmd_fonti, "prova": cmd_prova, "pulisci": cmd_pulisci}
+            "filtra": cmd_filtra, "fonti": cmd_fonti, "prova": cmd_prova, "pulisci": cmd_pulisci,
+            "storico": cmd_storico}
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from ..http import Client
 from ..parser import Message, parse_page
@@ -53,6 +53,35 @@ def fetch_channel_messages(client: Client, channel: str, *, last_id: int, max_pa
             log.warning("canale %s: pagine esaurite al id %d con ultimo noto %d, fino a %d messaggi saltati",
                         channel, min_letto, last_id, min_letto - last_id - 1)
     return out, max_seen
+
+
+def search_channel_messages(client: Client, channel: str, query: str, *, max_pages: int = 3) -> list[Message]:
+    """Cerca `query` nell'anteprima pubblica di un canale, indietro nel tempo.
+
+    La ricerca di t.me scavalca la paginazione normale: una sola richiesta pesca anche messaggi di mesi fa,
+    che la raccolta incrementale non ha mai scaricato.
+    """
+    out: list[Message] = []
+    visti: set[int] = set()
+    before: int | None = None
+    for _ in range(max_pages):
+        url = f"{BASE_URL}/{channel}?q={quote(query)}" + (f"&before={before}" if before else "")
+        resp = client.get(url)
+        if not urlsplit(str(resp.url)).path.startswith("/s/"):
+            raise NoPreview
+        page = parse_page(resp.text, channel)
+        if not page.has_preview:
+            raise NoPreview
+        if not page.ids:
+            break
+        nuovi = [m for m in page.messages if m.id not in visti]
+        visti.update(page.ids)
+        out.extend(nuovi)
+        piu_vecchio = min(page.ids)
+        if before is not None and piu_vecchio >= before:
+            break
+        before = piu_vecchio
+    return out
 
 
 @registra

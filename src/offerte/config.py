@@ -61,6 +61,8 @@ class Params:
     dashboard_regole: bool = True
     dashboard_max_offerte: int = 10000
     dashboard_giorni: int | None = None  # finestra della dashboard; assente = quella dei feed
+    # Grafico dello storico prezzi, caricato dal browser solo quando apri la scheda. Vuoto = niente grafico.
+    grafico_prezzi: str = "https://graph.keepa.com/pricehistory.png?domain=it&range=365&asin="
 
 
 @dataclass(frozen=True)
@@ -132,6 +134,7 @@ def load_config(path: Path | str) -> Config:
         dashboard_regole=bool(raw.get("dashboard_regole", True)),
         dashboard_max_offerte=int(raw.get("dashboard_max_offerte", 10000)),
         dashboard_giorni=None if raw.get("dashboard_giorni") is None else int(raw["dashboard_giorni"]),
+        grafico_prezzi=str(raw.get("grafico_prezzi", Params.grafico_prezzi)).strip(),
     )
     if params.dashboard_max_offerte < 1:
         raise ConfigError("parametri: dashboard_max_offerte deve essere almeno 1")

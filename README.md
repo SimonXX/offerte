@@ -51,6 +51,7 @@ parametri:
   dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
   # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
+  # grafico_prezzi: ""            # vuoto = niente grafico dello storico prezzi nelle schede
 
 canali:
   - {nome: mttvideo,            cartella: informatica}               # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
@@ -240,6 +241,7 @@ fonti:
 | `offerte prova <fonte> [--limite N]` | esegue una fonte senza salvare e mostra gli elementi prodotti |
 | `offerte serve [--host H] [--port P]` | serve `var/feeds/` via HTTP (default `127.0.0.1:8099`) |
 | `offerte search <parola> [--limite N]` | cerca nel testo e nel titolo delle offerte salvate |
+| `offerte storico <termine> [--canali …] [--pagine N]` | cerca un prodotto nell'archivio dei canali, anche di mesi o anni fa, e mostra l'andamento dei prezzi |
 | `offerte stats [--giorni N]` | offerte al giorno per canale e regole scattate |
 | `offerte filtra [parole…] [--prezzo-max X] [--prezzo-min X] [--sconto-min N] [--solo-coupon] [--escludi …] [--tutte] [--canali …]` | prova una regola al volo sulle offerte salvate, per tararla prima di metterla in config |
 
@@ -333,6 +335,23 @@ Dimensioni misurate il 29.10.2026 su un giro reale di 17 canali: 275 offerte in 
 129 KB compressi, cioè circa 1.010 byte per offerta (buona parte è l'URL dell'immagine, firmato e incomprimibile).
 La proiezione a regime, 5.000-6.500 offerte, è 5-6,5 MB in chiaro e 2,5-3 MB compressi: Pages comprime i `.json`,
 il server locale no.
+
+**Storico dei prezzi, a richiesta.** Ogni scheda di un prodotto Amazon ha un blocco «Storico prezzi» che,
+quando lo apri, mostra il grafico dei dodici mesi dal servizio indicato in `grafico_prezzi` (di default quello
+gratuito di Keepa). Si carica solo all'apertura, non al disegno delle schede, quindi finché non clicchi nessuna
+richiesta parte. Sappi però che aprirlo dice a quel servizio quale prodotto stai guardando; la pagina manda
+`no-referrer`, quindi non impara da dove. Con `grafico_prezzi: ""` nei parametri il blocco sparisce del tutto.
+
+Per andare più indietro dei dati raccolti c'è `offerte storico`, che interroga la ricerca interna dei canali
+invece del database:
+
+```sh
+uv run offerte storico "dyson v15" --canali raffica informatica
+```
+
+Pesca anche messaggi di anni fa, che la raccolta incrementale non ha mai scaricato (in una prova reale ha
+trovato sedici messaggi dal novembre 2021), e stampa data, prezzo, canale e link di ognuno, più minimo, massimo
+e ultimo prezzo visto. Costa una richiesta per canale, quindi si usa su un prodotto per volta, non di default.
 
 ### Miniflux
 
