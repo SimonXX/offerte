@@ -10,7 +10,8 @@ parametri:
   feed_max_elementi: 200
   giorni_dedupe: 7                # la stessa offerta ripubblicata oltre questo intervallo è un'offerta nuova
   notifica_max_ore: 24            # non notifica offerte più vecchie di così (evita raffiche al primo avvio)
-  giorni_ritenzione: 90           # le offerte più vecchie si eliminano a fine giro (0 = mai)
+  giorni_ritenzione: 21           # una settimana di margine sui 14 giorni della finestra;
+                                  # l'archivio storico sta in locale, online sarebbe peso morto
   dashboard: true                 # scrive dashboard.json e la pagina dei filtri in var/feeds/
   dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
