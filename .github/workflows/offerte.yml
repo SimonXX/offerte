@@ -1,4 +1,4 @@
-# Raccolta ogni 15 minuti su GitHub Actions e feed pubblicati su GitHub Pages. Costo zero su repository pubblico.
+# Raccolta ogni 5 minuti su GitHub Actions (il minimo che la pianificazione consente) e feed pubblicati su GitHub Pages. Costo zero su repository pubblico.
 # Stato (SQLite) su un branch orfano "data" riscritto a ogni giro, così il repository non cresce.
 name: offerte
 
@@ -6,7 +6,7 @@ on:
   schedule:
     # Minuti sfalsati di proposito: GitHub accoda le esecuzioni pianificate e sui runner gratuiti
     # scarta per prime quelle sui minuti tondi (:00, :15, :30, :45), i piu' congestionati.
-    - cron: "3,18,33,48 * * * *"
+    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
