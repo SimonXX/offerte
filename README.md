@@ -52,7 +52,8 @@ parametri:
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
   # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
   # grafico_prezzi: ""            # vuoto = niente grafico dello storico prezzi nelle schede
-  # condividi_url: ""             # vuoto = niente pulsante "mandamelo in chat" nelle schede
+  condividi_url: https://t.me/search_offerte_bot   # chat in cui arriva "mandamelo in chat";
+                                  # t.me/share/url apre invece il selettore, "" toglie il pulsante
 
 canali:
   - {nome: mttvideo,            cartella: informatica}               # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
@@ -371,10 +372,15 @@ Dimensioni misurate il 29.10.2026 su un giro reale di 17 canali: 275 offerte in 
 La proiezione a regime, 5.000-6.500 offerte, è 5-6,5 MB in chiaro e 2,5-3 MB compressi: Pages comprime i `.json`,
 il server locale no.
 
-**Mandarsi un'offerta in chat.** Ogni scheda ha «Mandamelo in chat»: apre Telegram con il selettore delle chat,
-già compilato con nome, prezzo, sconto, coupon e link, e scegli dove mandarlo (il tuo bot, Messaggi salvati, una
-persona). Non c'è nessun token nella pagina, quindi funziona anche sul sito pubblico: è il meccanismo di
-condivisione di Telegram, non un invio fatto dal programma. Si spegne con `condividi_url: ""`.
+**Mandarsi un'offerta in chat.** Ogni scheda ha «Mandamelo in chat». Con `condividi_url` puntato al tuo bot
+(`https://t.me/nome_bot`) apre direttamente quella chat con il messaggio già scritto, nome, prezzo, sconto,
+coupon e link: resta da premere invio, e l'offerta arriva nello stesso filo delle notifiche. Con
+`https://t.me/share/url` apre invece il selettore e scegli ogni volta dove mandarla; con `""` il pulsante
+sparisce.
+
+Non è il programma a inviare: è un collegamento che apre Telegram. La differenza conta, perché inviare davvero
+dalla pagina richiederebbe il token del bot dentro la pagina, e su GitHub Pages la pagina è pubblica. Il nome
+del bot invece sì, diventa pubblico: chiunque può scrivergli, ma il bot non risponde e non può raggiungerti.
 
 **Storico dei prezzi, a richiesta.** Ogni scheda di un prodotto Amazon ha un blocco «Storico prezzi» che,
 quando lo apri, mostra il grafico dei dodici mesi dal servizio indicato in `grafico_prezzi` (di default quello

@@ -198,3 +198,11 @@ def test_mandamelo_in_chat_senza_token():
     assert "dati.condividi" in js and "testoDaCondividere" in js
     for vietato in ("api.telegram.org", "sendMessage", "bot<", "TELEGRAM_BOT_TOKEN"):
         assert vietato not in js, vietato
+
+
+def test_due_forme_del_link_di_condivisione():
+    """t.me/share/url apre il selettore; t.me/<bot> apre quella chat con il messaggio pronto."""
+    js = sorgente("dashboard.js")
+    assert 'base.indexOf("/share/url") >= 0' in js
+    assert 'return base + "?url=" + encodeURIComponent(destinazione)' in js
+    assert 'return base + "?text=" + encodeURIComponent(testo + "\\n" + destinazione);' in js

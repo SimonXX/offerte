@@ -610,9 +610,7 @@
     }
     var daMandare = destinazione || messaggio;
     if (dati.condividi && daMandare) {
-      // Apre Telegram con il selettore delle chat: nessun token nella pagina, funziona anche su Pages.
-      var invio = urlSicuro(dati.condividi + "?url=" + encodeURIComponent(daMandare) +
-                            "&text=" + encodeURIComponent(testoDaCondividere(o)));
+      var invio = urlSicuro(linkCondivisione(o, daMandare));
       if (invio) {
         var manda = crea("a", "manda", "Mandamelo in chat");
         manda.href = invio;
@@ -639,6 +637,17 @@
 
     articolo.appendChild(corpo);
     return articolo;
+  }
+
+  function linkCondivisione(o, destinazione) {
+    // Due forme, decise dall'indirizzo in config. Con t.me/share/url si apre il selettore delle chat;
+    // con t.me/<bot> si apre direttamente quella chat, con il messaggio gia' scritto da inviare.
+    var base = dati.condividi;
+    var testo = testoDaCondividere(o);
+    if (base.indexOf("/share/url") >= 0) {
+      return base + "?url=" + encodeURIComponent(destinazione) + "&text=" + encodeURIComponent(testo);
+    }
+    return base + "?text=" + encodeURIComponent(testo + "\n" + destinazione);
   }
 
   function testoDaCondividere(o) {

@@ -64,7 +64,8 @@ class Params:
     dashboard_giorni: int | None = None  # finestra della dashboard; assente = quella dei feed
     # Grafico dello storico prezzi, caricato dal browser solo quando apri la scheda. Vuoto = niente grafico.
     grafico_prezzi: str = "https://graph.keepa.com/pricehistory.png?domain=it&range=365&asin="
-    # Base del link "mandamelo in chat": apre Telegram e fa scegliere la chat. Vuoto = niente pulsante.
+    # Base del link "mandamelo in chat". Con t.me/share/url apre il selettore delle chat; con
+    # t.me/<nome_bot> apre direttamente quella chat con il messaggio pronto. Vuoto = niente pulsante.
     condividi_url: str = "https://t.me/share/url"
 
 
