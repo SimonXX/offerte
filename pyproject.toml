@@ -1,6 +1,6 @@
 [project]
 name = "offerte"
-version = "0.2.0"
+version = "0.3.0"
 description = "Aggrega offerte da canali Telegram, feed, pagine e script e produce feed RSS e JSON filtrati"
 readme = "README.md"
 requires-python = ">=3.12"

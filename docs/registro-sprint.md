@@ -350,3 +350,54 @@ Con l'immagine che non carica, la scheda restava a due colonne e il testo finiva
 ### Lasciato aperto
 
 README, versione 0.3.0, `uv lock`, controllo della wheel e prova su telefono: S5.
+
+## S5, chiusura
+
+Data: 29 ottobre 2026.
+
+### Cosa è stato fatto
+
+README: sezione «Dashboard» fra «Feed» e «Miniflux» con apertura in locale e su Pages, accesso da telefono con
+`serve --host <IP LAN>`, tabella dei dieci parametri dell'URL, differenze fra regex Python e JavaScript,
+`offerte feed`, `dashboard: false` e `dashboard_regole: false`, il paragrafo su cosa espone `dashboard.json`
+su Pages e le dimensioni misurate. Riga `offerte feed` nella tabella dei comandi; `dashboard.html` e
+`feeds.opml` nell'elenco dei feed; `static/` e `tests/demo_dati.py` nella struttura; in «Test» la frase sui
+motori JavaScript e su Chrome headless.
+
+Versione 0.3.0 in `pyproject.toml` e `src/offerte/__init__.py`, poi `uv lock`. La docstring del pacchetto parla
+di fonti, non solo di Telegram, come già la descrizione in `pyproject.toml`.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 286 passed in 36,5 s |
+| controllo trattini | nessuna riga |
+| `uv run offerte --version` | `offerte 0.3.0` |
+| `uv lock --check` | Resolved 21 packages, nessuna modifica |
+| `git diff --stat pyproject.toml uv.lock` | 2 file, 2 righe: solo la versione |
+| `uv build --out-dir /tmp/offerte-wheel` | wheel e sdist costruiti |
+| `unzip -l offerte-0.3.0-py3-none-any.whl` | contiene `offerte/static/` con i quattro file |
+| screenshot a 320 px con `?q=ssd&pmax=1000` | `scrollWidth` 305 uguale a `clientWidth`, tutto leggibile |
+| screenshot a 360 px con tema scuro | leggibile, nessuno scroll orizzontale |
+| `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |
+
+A34 e A35 soddisfatti.
+
+### A36, prova su telefono
+
+**Non eseguita: non ho un telefono a disposizione in questa sessione.** Al suo posto sono stati eseguiti i test
+a 320, 360, 390, 768 e 1280 px (`test_layout_senza_scroll`, iframe in Chrome headless: `scrollWidth` mai
+maggiore di `clientWidth`) e due screenshot a 320 e 360 px, uno per tema. Restano da provare a mano sul
+telefono: lo zoom di iOS al focus (i campi sono a 16 px, che è la condizione per non averlo), la punteggiatura
+intelligente che trasformerebbe apici e trattini nelle regex (`autocorrect="off"` e `autocapitalize="none"` su
+tutti i campi di testo), «Copia link» e «Copia YAML» su http da IP di LAN (contesto non sicuro: il codice
+ripiega su `execCommand`), la chiusura del dialogo con Esc.
+
+### Deviazioni
+
+Nessuna.
+
+### Lasciato aperto
+
+S6: le due opzioni della fonte `rss`, `config.locale.yaml` e la sezione «Fonti pronte» del README.

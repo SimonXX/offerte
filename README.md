@@ -119,6 +119,7 @@ fetch di tutte. Esempi di configurazione per ogni tipo sono commentati in `confi
 | comando | cosa fa |
 |:--|:--|
 | `offerte fetch [--fonte X] [--storico N] [--senza-notifiche]` | legge le fonti, aggiorna il database, applica le regole, invia le notifiche, rigenera i feed |
+| `offerte feed` | rigenera feed, OPML e dashboard dal database, senza leggere le fonti |
 | `offerte fonti` | fonti configurate con tipo, cartella, intervallo, ultimo fetch e stato |
 | `offerte pulisci [--giorni N]` | elimina le offerte più vecchie di N giorni e compatta il database (a fine `fetch` avviene da sé, senza compattare) |
 | `offerte prova <fonte> [--limite N]` | esegue una fonte senza salvare e mostra gli elementi prodotti |
@@ -139,6 +140,8 @@ In `var/feeds/`, serviti dal server:
 
 ```
 http://127.0.0.1:8099/                          indice
+http://127.0.0.1:8099/dashboard.html            dashboard dei filtri
+http://127.0.0.1:8099/feeds.opml                tutti i feed in un file, da importare nel lettore
 http://127.0.0.1:8099/cartella/informatica.xml  RSS 2.0 della cartella
 http://127.0.0.1:8099/cartella/informatica.json JSON Feed della cartella
 http://127.0.0.1:8099/regola/ssd-sotto-60.xml   RSS 2.0 della regola
@@ -148,6 +151,62 @@ http://127.0.0.1:8099/regola/ssd-sotto-60.json  JSON Feed della regola
 Ogni elemento ha titolo `prodotto, prezzo (-sconto%)`, descrizione con immagine, testo originale, prezzo barrato,
 coupon, canali di provenienza e link al messaggio, link diretto all'offerta, data del primo post. Il JSON Feed porta
 gli stessi campi anche strutturati in `_offerte`.
+
+### Dashboard
+
+`http://127.0.0.1:8099/dashboard.html` (oppure `https://<utente>.github.io/<repo>/dashboard.html` su Pages) è una
+pagina statica che filtra tutte le offerte della finestra `feed_giorni`: parole e regex, escludi, prezzo, sconto
+minimo, cartella, canale, periodo, solo con coupon, sei ordinamenti. HTML, CSS e JavaScript scritti a mano, nessuna
+libreria, nessuna CDN, nessun passo di build: i quattro file stanno in `src/offerte/static/` e vengono copiati in
+`var/feeds/` a ogni giro insieme a `dashboard.json`.
+
+Da telefono, sulla stessa rete: `uv run offerte serve --host 192.168.x.y` e poi `http://192.168.x.y:8099/dashboard.html`
+dal telefono (solo su rete fidata). Da `file://` i dati non si caricano: il browser blocca il fetch, e la pagina lo
+dice.
+
+Lo stato dei filtri sta nella query string, quindi un filtro si salva nei preferiti e si manda a qualcuno con «Copia
+link»:
+
+| parametro | valore |
+|:--|:--|
+| `q` | una voce di Parole, ripetibile |
+| `no` | una voce di Escludi, ripetibile |
+| `tutte` | `1` se servono tutte le parole |
+| `pmin`, `pmax` | prezzo minimo e massimo, con il punto decimale |
+| `smin` | sconto minimo in percentuale, da 1 a 99 |
+| `cart` | cartelle separate da virgola |
+| `can` | canali separati da virgola, in unione con le cartelle |
+| `per` | `1h 3h 6h 12h 24h 48h 3g 7g` |
+| `cp` | `1` per le sole offerte con coupon |
+| `ord` | `data-desc data-asc prezzo-asc prezzo-desc sconto-desc sconto-asc` |
+
+Esempio: `dashboard.html?q=apple%20watch&no=cinturino&pmax=250&per=7g&ord=prezzo-asc`.
+
+Le parole si scrivono una per riga e valgono le stesse regole della config: parola intera senza distinzione di
+maiuscole, oppure una regex fra barre. Le regex sono scritte in sintassi Python e tradotte in JavaScript: `\b`, `\w`,
+`\d`, `\A`, `\Z`, `(?P<nome>…)` e `(?i)` iniziale funzionano; gruppi possessivi, gruppi atomici e le classi negate
+dentro parentesi quadre (`[\W]`) no, e la pagina lo segnala sotto il campo. Su un browser senza lookbehind (Safari
+prima di 16.4) la regex si compila senza regole Unicode e `\b` vale solo per le lettere ASCII, con un avviso.
+
+«Crea regola» prende i filtri correnti e produce il blocco YAML da incollare sotto `regole:` in `config.yaml`: le
+soglie di prezzo e sconto, il coupon, i canali e le parole, con la quotatura giusta. Il periodo non si esporta,
+perché una regola non ha un periodo. I pulsanti in cima sono le regole già in config: un clic ne riapplica i filtri.
+
+`offerte feed` rigenera feed, OPML e `dashboard.json` dal database senza toccare la rete: serve per provare la pagina
+dopo aver cambiato una regola. Con `dashboard: false` nei parametri la pagina e i suoi file non si scrivono (e si
+cancellano se c'erano); con `dashboard_regole: false` i preset e «Crea regola» restano senza regole, e parole e
+soglie non finiscono nel JSON.
+
+**Cosa espone `dashboard.json`.** Contiene tutte le offerte della finestra, con il testo intero del messaggio e il
+link affiliato: più di quanto espongano i feed, tagliati a `feed_max_elementi`. Se `dashboard_regole` è vero contiene
+anche nome, parole, esclusioni e soglie di ogni regola. Su GitHub Pages quel file è pubblico come i feed: chi ha
+l'URL del repository lo legge. Se una regola contiene qualcosa che non vuoi pubblicare, metti `dashboard_regole:
+false`; se non vuoi pubblicare il corpus, `dashboard: false`.
+
+Dimensioni misurate il 29.10.2026 su un giro reale di 17 canali: 256 offerte in 14 giorni fanno 261 KB in chiaro e
+121 KB compressi, cioè circa 1.020 byte per offerta (il 37% è l'URL dell'immagine, firmato e incomprimibile). La
+proiezione a regime, 5.000-6.500 offerte, è 5-6,5 MB in chiaro e 2,5-3 MB compressi: Pages comprime i `.json`, il
+server locale no.
 
 ### Miniflux
 
@@ -313,8 +372,12 @@ uv run pytest
 
 Coprono il parser su fixture salvate dell'HTML di `t.me/s`, i formati di prezzo, l'estrazione di barrato, sconto,
 coupon e nome, la normalizzazione dei link, il dedupe fra canali e nel tempo, le regole con regex, il backoff del
-client e un giro completo su trasporto finto (canale con storico, canale senza anteprima, canale guasto, notifica
-senza ripetizione, feed generati).
+client, la riga di comando, `deploy/stato.sh` su un bare repo temporaneo e un giro completo su trasporto finto
+(canale con storico, canale senza anteprima, canale guasto, notifica senza ripetizione, feed generati).
+
+Il motore dei filtri della dashboard gira su gjs, node, deno e bun, quelli che trova, e deve dare gli stessi id di
+`rules.matches`; la pagina vera si apre in Chrome headless (`google-chrome`, `chromium` o `$OFFERTE_TEST_BROWSER`)
+e si confronta con lo stesso riferimento. Se il motore o il browser mancano, quei test si saltano.
 
 ## Struttura
 
@@ -326,7 +389,7 @@ offerte/
 ├── Containerfile
 ├── systemd/                unit, timer e installa.sh
 ├── src/offerte/
-│   ├── cli.py              fetch | serve | search | stats | filtra | fonti | prova
+│   ├── cli.py              fetch | serve | feed | search | stats | filtra | fonti | prova | pulisci
 │   ├── config.py           caricamento e validazione di config.yaml
 │   ├── sources/            fonti: base, telegram, rss, html, comando, apify; registro dei tipi
 │   ├── http.py             client httpx: cortesia, backoff, risoluzione redirect
@@ -336,11 +399,13 @@ offerte/
 │   ├── dedupe.py           chiave URL o hash del testo
 │   ├── store.py            SQLite
 │   ├── rules.py            regole di alert
-│   ├── feeds.py            RSS 2.0, JSON Feed, indice
+│   ├── feeds.py            RSS 2.0, JSON Feed, indice, OPML, dashboard.json
+│   ├── static/             dashboard.html, dashboard.css, filtri.js, dashboard.js (copiati in var/feeds/)
 │   ├── notify.py           bot Telegram, .env
 │   ├── fetch.py            orchestrazione di un giro
 │   ├── serve.py            server HTTP
 │   └── log.py              stderr + var/offerte.log con rotazione
 ├── tests/                  pytest, fixture HTML in tests/fixtures/
+│   └── demo_dati.py        database e config di prova: `uv run python tests/demo_dati.py /tmp/offerte-demo`
 └── var/                    creata al primo avvio: offerte.sqlite, feeds/, offerte.log
 ```
