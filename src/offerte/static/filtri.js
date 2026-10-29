@@ -401,6 +401,17 @@
     });
   }
 
+  // La stessa regola come file a se' in regole/: stessi campi, senza l'indentazione che serve
+  // solo quando la si incolla sotto `regole:` in config.yaml.
+  function yamlRegolaFile(stato, opzioni, cartelle) {
+    var r = yamlRegola(stato, opzioni, cartelle);
+    if (!r) { return null; }
+    var righe = r.yaml.replace(/\n+$/, "").split("\n").map(function (riga) {
+      return riga.replace(/^ {2}- /, "").replace(/^ {4}/, "");
+    });
+    return {yaml: righe.join("\n") + "\n", esclusi: r.esclusi};
+  }
+
   function leggiUrl(search, cartelle) {
     var stato = statoDefault();
     var testo = String(search === undefined || search === null ? "" : search).replace(/^\?/, "");
@@ -622,6 +633,7 @@
     gruppiAttivi: gruppiAttivi,
     togliGruppo: togliGruppo,
     copiaStato: copiaStato,
+    yamlRegolaFile: yamlRegolaFile,
     leggiUrl: leggiUrl,
     scriviUrl: scriviUrl,
     statoDaRegola: statoDaRegola,

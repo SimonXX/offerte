@@ -344,9 +344,33 @@ maiuscole, oppure una regex fra barre. Le regex sono scritte in sintassi Python 
 dentro parentesi quadre (`[\W]`) no, e la pagina lo segnala sotto il campo. Su un browser senza lookbehind (Safari
 prima di 16.4) la regex si compila senza regole Unicode e `\b` vale solo per le lettere ASCII, con un avviso.
 
-«Crea regola» prende i filtri correnti e produce il blocco YAML da incollare sotto `regole:` in `config.yaml`: le
-soglie di prezzo e sconto, il coupon, i canali e le parole, con la quotatura giusta. Il periodo non si esporta,
-perché una regola non ha un periodo. I pulsanti in cima sono le regole già in config: un clic ne riapplica i filtri.
+«Crea regola» prende i filtri correnti e li trasforma in una regola: soglie di prezzo e sconto, coupon, canali e
+parole, con la quotatura giusta. Il periodo non si esporta, perché una regola non ha un periodo. I pulsanti in cima
+sono le regole già attive: un clic ne riapplica i filtri.
+
+Il pulsante **Crea la regola** apre l'editor web di GitHub con il file `regole/<nome>.yaml` già scritto: resta da
+premere «Commit changes» e la regola è attiva al giro successivo. Nessun terminale, nessuna indentazione da
+azzeccare, funziona anche dal telefono. Compare solo se `regole_url` è impostata in config, nella forma
+`https://github.com/<utente>/<repo>/new/<branch>`. Sotto «Oppure a mano» resta il blocco YAML da copiare, per chi
+preferisce `config.yaml`.
+
+### Regole come file singoli
+
+Oltre alla sezione `regole:` di `config.yaml`, ogni file `*.yaml` dentro la cartella `regole/` è una regola. Il
+file contiene i campi senza indentazione e può omettere `nome`, che allora vale il nome del file:
+
+```yaml
+# regole/ram-ddr5.yaml
+parole: ['/\bddr5\b/', '/\b32\s?gb\b/']
+tutte: true
+prezzo_max: 90
+notify: true
+```
+
+Un file può anche contenere un elenco di regole. I file si leggono in ordine di nome, dopo quelle di `config.yaml`;
+due regole con lo stesso nome fermano il caricamento. La cartella si cambia con `regole_dir`, e se non esiste non
+succede niente. Il vantaggio è che una campagna si aggiunge, si spegne (`attiva: false`) o si cancella toccando un
+file solo, senza rischiare di rompere il resto della configurazione.
 
 Il menu **Periodo** non è una lista fissa: si costruisce dalla finestra dei dati. La prima voce dice quanto è
 larga («Tutto il periodo (14 giorni)») e i gradini arrivano fino a lì, quindi alzando la finestra compaiono da soli

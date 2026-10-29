@@ -155,16 +155,23 @@
     <input type="checkbox" id="notify">
     <label for="notify">Notifica su Telegram</label>
   </p>
-  <p class="campo">
-    <label for="yaml">Regola da incollare</label>
-    <textarea id="yaml" rows="10" readonly spellcheck="false"></textarea>
-  </p>
   <p id="esclusi-regola" class="aiuto"></p>
-  <p class="aiuto">Incolla sotto <code>regole:</code> in config.yaml.</p>
   <p class="azioni">
-    <button type="button" id="copia-yaml">Copia YAML</button>
+    <a id="crea-github" class="bottone" rel="noopener noreferrer" target="_blank" hidden>Crea la regola</a>
     <button type="button" id="chiudi-dialogo">Chiudi</button>
   </p>
+  <p id="aiuto-github" class="aiuto" hidden>Si apre GitHub con il file gia' scritto: premi
+    <strong>Commit changes</strong> e la regola e' attiva al giro dopo, entro un quarto d'ora.</p>
+  <details id="a-mano">
+    <summary>Oppure a mano</summary>
+    <p class="campo">
+      <label for="yaml">Regola da incollare</label>
+      <textarea id="yaml" rows="10" readonly spellcheck="false"></textarea>
+    </p>
+    <p class="aiuto">Incolla sotto <code>regole:</code> in config.yaml, oppure salva il contenuto senza
+      indentazione come <code>regole/&lt;nome&gt;.yaml</code>.</p>
+    <p class="azioni"><button type="button" id="copia-yaml">Copia YAML</button></p>
+  </details>
 </dialog>
 
 </body>

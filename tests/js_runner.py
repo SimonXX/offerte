@@ -46,6 +46,7 @@ var fuori = {casi: [], url: [], url_invalidi: [], regex: [], preset: []};
   }
   var r = F.applica(offerte, stato, opz);
   var regola = F.yamlRegola(stato, {nome: caso.nome_regola, notify: !!caso.notify}, CASI.cartelle);
+  var regolaFile = F.yamlRegolaFile(stato, {nome: caso.nome_regola, notify: !!caso.notify}, CASI.cartelle);
   var voce = {
     nome: caso.nome,
     ids: ids(r.righe),
@@ -55,6 +56,7 @@ var fuori = {casi: [], url: [], url_invalidi: [], regex: [], preset: []};
     errori: r.compilato.errori,
     avvisi: r.compilato.avvisi.length,
     yaml: regola ? regola.yaml : null,
+    yaml_file: regolaFile ? regolaFile.yaml : null,
     esclusi: regola ? regola.esclusi : [],
     gruppi: F.gruppiAttivi(stato),
     nomeSuggerito: F.nomeSuggerito(stato)

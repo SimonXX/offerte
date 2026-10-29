@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [config.yaml, "src/**", pyproject.toml, uv.lock, ".github/workflows/offerte.yml", "deploy/**"]
+    paths: [config.yaml, "regole/**", "src/**", pyproject.toml, uv.lock, ".github/workflows/offerte.yml", "deploy/**"]
 
 permissions:
   contents: write

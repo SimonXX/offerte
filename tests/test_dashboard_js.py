@@ -185,3 +185,27 @@ def test_regex_come_python(motore, casi, risultati):
             continue
         assert voce["ok"] is True, f"{voce['src']}: {voce}"
         assert voce["esito"] is atteso, f"{voce['src']} su {voce['testo']!r}"
+
+
+@pytest.mark.parametrize("motore", MOTORI)
+def test_regola_come_file_a_se(motore, casi, risultati, tmp_path):
+    """La regola salvata in regole/<nome>.yaml deve valere quanto la stessa incollata in config.yaml."""
+    ottenuti = {c["nome"]: c for c in risultati[motore]["casi"]}
+    provati = 0
+    for caso in casi_di_parita(casi):
+        voce = ottenuti[caso["nome"]]
+        if voce["yaml"] is None:
+            assert voce["yaml_file"] is None, caso["nome"]
+            continue
+        cartella = tmp_path / f"{motore}-{caso['nome']}"
+        (cartella / "regole").mkdir(parents=True)
+        (cartella / "regole" / "dalla-pagina.yaml").write_text(voce["yaml_file"], encoding="utf-8")
+        config = _config(cartella, casi["fonti"])
+        (dal_file,) = config.regole
+
+        accanto = tmp_path / f"{motore}-{caso['nome']}-inline"
+        accanto.mkdir()
+        (in_config,) = _config(accanto, casi["fonti"], voce["yaml"]).regole
+        assert dal_file == in_config, f"{caso['nome']}\n{voce['yaml_file']}"
+        provati += 1
+    assert provati >= 10

@@ -118,9 +118,14 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 22px; flex: 0 0 
 textarea { resize: vertical; }
 #yaml { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 14px; }
 
-button {
+button, .bottone {
   font: inherit; min-height: 44px; padding: 8px 14px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--bordo); background: var(--superficie); color: var(--testo);
+}
+/* L'azione principale del dialogo: si deve vedere che e' quella da premere. */
+.bottone {
+  display: inline-flex; align-items: center; text-decoration: none;
+  background: var(--accento); color: var(--accento-testo); border-color: var(--accento);
 }
 button[aria-pressed="true"] { background: var(--accento); color: var(--accento-testo); border-color: var(--accento); }
 button:disabled { opacity: 0.55; cursor: not-allowed; }

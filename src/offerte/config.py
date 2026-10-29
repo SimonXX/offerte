@@ -65,6 +65,10 @@ class Params:
     # Cartelle gia' spuntate all'apertura della dashboard: serve a non partire da tutto.
     # Vuoto = nessun filtro iniziale. Un link con ?cart=... o ?can=... ha sempre la precedenza.
     dashboard_cartelle: tuple[str, ...] = ()
+    regole_dir: str = "regole"      # cartella con una regola per file, accanto a config.yaml
+    # Base del pulsante "Crea su GitHub": apre l'editor web con il file della regola gia' scritto.
+    # Forma attesa: https://github.com/<utente>/<repo>/new/<branch>. Vuoto = niente pulsante.
+    regole_url: str = ""
     # Grafico dello storico prezzi, caricato dal browser solo quando apri la scheda. Vuoto = niente grafico.
     grafico_prezzi: str = "https://graph.keepa.com/pricehistory.png?domain=it&range=365&asin="
     # Base del link "mandamelo in chat". Con t.me/share/url apre il selettore delle chat; con
@@ -98,6 +102,32 @@ def compile_keyword(parola: str) -> re.Pattern[str]:
     if len(parola) > 2 and parola.startswith("/") and parola.endswith("/"):
         return re.compile(parola[1:-1], re.IGNORECASE)
     return re.compile(r"(?<!\w)" + re.escape(parola) + r"(?!\w)", re.IGNORECASE)
+
+
+def _regole_da_cartella(cartella: Path) -> list[tuple[str, dict]]:
+    """Una regola per file in `regole/`: si aggiunge committando un file, senza toccare config.yaml.
+
+    Il file contiene i soli campi della regola, senza indentazione. `nome` si può omettere: vale
+    il nome del file. Dentro, una regola sola oppure un elenco di regole.
+    """
+    if not cartella.is_dir():
+        return []
+    voci: list[tuple[str, dict]] = []
+    for file in sorted(cartella.glob("*.y*ml")):
+        try:
+            contenuto = yaml.safe_load(file.read_text(encoding="utf-8"))
+        except yaml.YAMLError as e:
+            raise ConfigError(f"{file.name}: YAML non valido ({e})") from None
+        if contenuto is None:
+            continue
+        gruppo = contenuto if isinstance(contenuto, list) else [contenuto]
+        for n, voce in enumerate(gruppo):
+            if not isinstance(voce, dict):
+                raise ConfigError(f"{file.name}: serve un elenco di campi, non {type(voce).__name__}")
+            if not voce.get("nome"):
+                voce = {"nome": file.stem, **voce}
+            voci.append((file.name if len(gruppo) == 1 else f"{file.name}[{n}]", voce))
+    return voci
 
 
 def _check_keys(section: str, data: dict, allowed: set[str]) -> None:
@@ -145,6 +175,8 @@ def load_config(path: Path | str) -> Config:
         dashboard_max_offerte=int(raw.get("dashboard_max_offerte", 10000)),
         dashboard_giorni=None if raw.get("dashboard_giorni") is None else int(raw["dashboard_giorni"]),
         dashboard_cartelle=tuple(str(c).strip().lower() for c in (raw.get("dashboard_cartelle") or []) if str(c).strip()),
+        regole_dir=str(raw.get("regole_dir", "regole")).strip() or "regole",
+        regole_url=str(raw.get("regole_url", "")).strip().rstrip("/"),
         grafico_prezzi=str(raw.get("grafico_prezzi", Params.grafico_prezzi)).strip(),
         condividi_url=str(raw.get("condividi_url", Params.condividi_url)).strip(),
     )
@@ -176,12 +208,18 @@ def load_config(path: Path | str) -> Config:
         per_cartella.setdefault(f.cartella.lower(), set()).add(f.nome)
 
     regole: list[Rule] = []
-    for i, rr in enumerate(data.get("regole") or []):
+    voci = [(f"regole[{i}]", rr) for i, rr in enumerate(data.get("regole") or [])]
+    voci += _regole_da_cartella(path.parent / params.regole_dir)
+    visti: set[str] = set()
+    for dove, rr in voci:
         if not isinstance(rr, dict) or not rr.get("nome"):
-            raise ConfigError(f"regole[{i}]: serve almeno 'nome'")
-        _check_keys(f"regole[{i}]", rr, {"nome", "parole", "prezzo_max", "prezzo_min", "canali", "notify", "tutte",
-                                         "escludi", "sconto_min", "solo_coupon", "attiva"})
+            raise ConfigError(f"{dove}: serve almeno 'nome'")
+        _check_keys(dove, rr, {"nome", "parole", "prezzo_max", "prezzo_min", "canali", "notify", "tutte",
+                               "escludi", "sconto_min", "solo_coupon", "attiva"})
         nome = str(rr["nome"]).strip()
+        if nome in visti:
+            raise ConfigError(f"{dove}: esiste gia' una regola di nome '{nome}'")
+        visti.add(nome)
         parole = [str(p) for p in _as_list(rr.get("parole"))]
         sconto_min = rr.get("sconto_min")
         if sconto_min is not None and (isinstance(sconto_min, bool) or not isinstance(sconto_min, int)

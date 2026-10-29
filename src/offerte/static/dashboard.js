@@ -59,6 +59,8 @@
     yaml: document.getElementById("yaml"),
     esclusiRegola: document.getElementById("esclusi-regola"),
     copiaYaml: document.getElementById("copia-yaml"),
+    creaGithub: document.getElementById("crea-github"),
+    aiutoGithub: document.getElementById("aiuto-github"),
     chiudiDialogo: document.getElementById("chiudi-dialogo")
   };
 
@@ -877,9 +879,33 @@
     DOM.dialogo.showModal();
   }
 
+  // Nome del file che conterra' la regola: solo lettere, cifre e trattini, come il nome della regola.
+  function nomeFile(nome) {
+    return String(nome).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  // L'editor web di GitHub accetta nome e contenuto nell'indirizzo: la regola arriva gia' scritta e
+  // all'utente resta da premere "Commit changes". Senza regole_url in config il pulsante non compare.
+  function linkNuovaRegola(nome, yaml) {
+    var file = nomeFile(nome);
+    if (!dati.nuova_regola || !yaml || !file) { return ""; }
+    return urlSicuro(dati.nuova_regola + "?filename=" + encodeURIComponent("regole/" + file + ".yaml")
+                     + "&value=" + encodeURIComponent(yaml));
+  }
+
   function aggiornaYaml() {
-    var prodotta = F.yamlRegola(stato, {nome: DOM.nomeRegola.value.trim(), notify: DOM.notify.checked}, cartelle);
+    var nome = DOM.nomeRegola.value.trim();
+    var prodotta = F.yamlRegola(stato, {nome: nome, notify: DOM.notify.checked}, cartelle);
     DOM.yaml.value = prodotta ? prodotta.yaml : "";
+    var perFile = F.yamlRegolaFile(stato, {nome: nome, notify: DOM.notify.checked}, cartelle);
+    var link = perFile ? linkNuovaRegola(nome, perFile.yaml) : "";
+    if (link) {
+      DOM.creaGithub.setAttribute("href", link);
+    } else {
+      DOM.creaGithub.removeAttribute("href");
+    }
+    DOM.creaGithub.hidden = !link;
+    DOM.aiutoGithub.hidden = !link;
     var note = [];
     if (stato.per !== null) { note.push("Non incluso nella regola: periodo."); }
     if (prodotta && prodotta.esclusi.length) {

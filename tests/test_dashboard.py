@@ -379,3 +379,63 @@ def test_cartelle_predefinite_inesistenti_bloccate(tmp_path):
                        "canali: [{nome: a, cartella: informatica}]\nregole: []\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="casa"):
         load_config(cattiva)
+
+
+# --- regole come file singoli in regole/ -------------------------------------
+
+def _con_regole(tmp_path, file: dict[str, str], extra: str = ""):
+    base = tmp_path / "r"
+    (base / "regole").mkdir(parents=True)
+    for nome, testo in file.items():
+        (base / "regole" / nome).write_text(testo, encoding="utf-8")
+    cfg = base / "config.yaml"
+    cfg.write_text("canali: [{nome: alfa, cartella: informatica}]\n" + extra, encoding="utf-8")
+    return load_config(cfg)
+
+
+def test_regola_da_file_prende_il_nome_dal_file(tmp_path):
+    """Il percorso facile: un file con due righe dentro, il nome lo fa il nome del file."""
+    config = _con_regole(tmp_path, {"ram-ddr5.yaml": "parole: [ddr5]\nprezzo_max: 90\n"})
+    (regola,) = config.regole
+    assert regola.nome == "ram-ddr5" and regola.prezzo_max == 90 and regola.attiva
+
+
+def test_regola_da_file_nome_esplicito_e_elenco(tmp_path):
+    config = _con_regole(tmp_path, {
+        "una.yaml": "nome: scelto-io\nparole: [ssd]\n",
+        "due.yml": "- {nome: a, parole: [cuffie]}\n- {nome: b, parole: [mouse]}\n",
+    })
+    assert [r.nome for r in config.regole] == ["a", "b", "scelto-io"]  # i file si leggono in ordine di nome
+
+
+def test_regole_di_config_e_di_cartella_convivono(tmp_path):
+    config = _con_regole(tmp_path, {"dal-file.yaml": "parole: [ssd]\n"},
+                         extra="regole:\n  - {nome: in-config, parole: [nvme]}\n")
+    assert [r.nome for r in config.regole] == ["in-config", "dal-file"]
+
+
+def test_regola_duplicata_fermata(tmp_path):
+    with pytest.raises(ConfigError, match="esiste gia'"):
+        _con_regole(tmp_path, {"doppia.yaml": "parole: [ssd]\n"},
+                    extra="regole:\n  - {nome: doppia, parole: [nvme]}\n")
+
+
+def test_regola_con_yaml_rotto_dice_quale_file(tmp_path):
+    with pytest.raises(ConfigError, match="rotta.yaml"):
+        _con_regole(tmp_path, {"rotta.yaml": "parole: [ssd\nprezzo_max: ]\n"})
+
+
+def test_cartella_regole_assente_non_e_un_errore(tmp_path):
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("canali: [{nome: alfa}]\nregole: [{nome: r, parole: [ssd]}]\n", encoding="utf-8")
+    assert len(load_config(cfg).regole) == 1
+
+
+def test_link_nuova_regola_nella_testa(tmp_path):
+    config = config_demo(tmp_path)
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store, nuova_regola="https://esempio.invalid/new/main")
+    assert doc["nuova_regola"] == "https://esempio.invalid/new/main"
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store)
+    assert "nuova_regola" not in doc

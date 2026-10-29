@@ -19,6 +19,8 @@ parametri:
   dashboard_cartelle: [informatica, cina]   # cartelle gia' spuntate all'apertura: il grosso che interessa
                                   # e' tech. "casa" e "raffica" restano raccolte, a una spunta di distanza
   # grafico_prezzi: ""            # vuoto = niente grafico dello storico prezzi nelle schede
+  regole_url: https://github.com/SimonXX/offerte/new/main   # pulsante "Crea la regola": apre l'editor
+                                  # di GitHub con il file gia' scritto. Vuoto = resta solo il copia e incolla
   condividi_url: https://t.me/search_offerte_bot   # chat in cui arriva "mandamelo in chat";
                                   # t.me/share/url apre invece il selettore, "" toglie il pulsante
 

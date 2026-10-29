@@ -885,3 +885,30 @@ La sveglia è anche un esperimento di diagnosi: se il suo cron parte mentre quel
 partire, il problema è quel file; se non parte nemmeno il suo, è la pianificazione sull'intero repository, e allora
 la strada resta un trigger esterno (un timer sulla macchina dell'utente, oppure un Cron Trigger su Cloudflare
 Workers, gratuito e nel suo account, che chiama l'API di GitHub).
+
+## Richiesta: creare una regola deve essere alla portata di chi sa fare poco
+
+«poi mettere una regola è macchinosissimo deve essere alla portata di uno che sa fare davvero poco». Era vero: il
+dialogo finiva con «Copia YAML» e la frase «Incolla sotto `regole:` in config.yaml», cioè aprire un file, trovare
+il punto giusto, azzeccare l'indentazione di un formato dove l'indentazione è semantica, e committare.
+
+Due cambiamenti, uno nel modello e uno nell'interfaccia.
+
+Nel modello, le regole non vivono più solo nella sezione `regole:` di `config.yaml`: ogni file dentro `regole/` è
+una regola, con i campi senza indentazione e `nome` facoltativo (vale il nome del file). Un file può contenere un
+elenco. I nomi duplicati fermano il caricamento, così un doppione si vede subito invece di comportarsi in modo
+strano. Questo rende una campagna un oggetto singolo che si aggiunge e si toglie senza toccare il resto.
+
+Nell'interfaccia, il dialogo ha ora come azione principale «Crea la regola», che apre l'editor web di GitHub con
+`filename` e `value` già compilati: all'utente resta «Commit changes». Il commit tocca `regole/**`, che è stato
+aggiunto ai `paths` del workflow, quindi il giro parte subito e la regola è attiva in un paio di minuti. Il
+percorso manuale è rimasto sotto una piega, «Oppure a mano». Il pulsante compare solo se `regole_url` è in config,
+quindi la pagina non contiene indirizzi scritti nel codice.
+
+Verificato che GitHub conservi i due parametri anche attraverso il redirect di login (302 verso
+`/login?return_to=...` con `filename` e `value` intatti): chi è già autenticato nel browser atterra direttamente
+sull'editor compilato.
+
+Sul JavaScript è stato aggiunto il solo `yamlRegolaFile`, che toglie l'indentazione dalla forma prodotta da
+`yamlRegola`. Non tocca la corrispondenza: un test nuovo carica la regola nelle due forme, da file e incollata in
+`config.yaml`, e confronta i due oggetti `Rule` su tutti i casi di parità, per ciascun motore JavaScript.
