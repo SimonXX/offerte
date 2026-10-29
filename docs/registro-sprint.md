@@ -213,3 +213,68 @@ delle fonti e l'OPML.
 ### Lasciato aperto
 
 Problemi 4, 5, 6 e 25 chiusi da questo sprint. I quattro file statici sono segnaposto fino a S3 e S4.
+
+## S3, motore JavaScript
+
+Data: 29 ottobre 2026.
+
+### Cosa è stato fatto
+
+`src/offerte/static/filtri.js`: motore puro in una IIFE che espone solo `globalThis.Filtri`. Nessun DOM,
+nessuna rete, nessuna libreria. Funzioni: `statoDefault`, `slug`, `traduciRegex`, `compilaVoce`, `compila`,
+`periodoSecondi`, `insiemeCanali`, `applica`, `ordina`, `gruppiAttivi`, `togliGruppo`, `copiaStato`,
+`leggiUrl`, `scriviUrl`, `statoDaRegola`, `regolaUguale`, `nomeSuggerito`, `yamlRegola`.
+
+La traduzione delle regex Python scorre la stringa carattere per carattere tenendo conto delle classi:
+`\b` e `\B` diventano confini Unicode con lookbehind, `\w` `\W` `\d` `\D` passano a `\p{L}\p{N}_` e `\p{Nd}`,
+`(?P<n>` diventa `(?<n>`, `(?P=n)` diventa `\k<n>`, `\A` e `\Z` diventano `^` e `$`, `(?i)` iniziale si toglie e
+gli escape di punteggiatura che JS con il flag `u` rifiuta perdono il backslash. Le espressioni con lookbehind
+stanno in stringhe, mai in literal, e si compilano con `new RegExp` in `try/catch`: dove il motore non le regge
+si ripiega sulla regex grezza con flag `i` e un avviso.
+
+`tests/js_runner.py` costruisce un solo script temporaneo (sorgente di `filtri.js`, i casi come costante, un
+harness fisso) e lo lancia con gjs, node, deno o bun: nessun file letto dal JS, nessun argomento, stesso
+comportamento su tutti i motori.
+
+`tests/fixtures/dashboard_casi.json`: 7 fonti (cartelle in maiuscole miste, una cartella che si chiama come un
+canale, un canale inattivo, canali `on` e `no`), 40 offerte, 51 casi, 6 stati per l'andata e ritorno dell'URL,
+8 URL non validi, 22 vettori di regex, 4 regole per i preset.
+
+### Deviazioni
+
+- `traduciRegex` restituisce anche `errore` quando incontra una flag inline diversa da `(?i)` iniziale: la
+  specifica (§3.2) dichiara `{src, avvisi[], tradotta}` ma chiede anche che quella flag sia un errore con un
+  messaggio preciso, e un avviso non basta. `compilaRegex` lo trasforma in `{ok: false, errore}`.
+- `applica` accetta anche il caso in cui `compila` ha errori: il filtro testo si spegne e gli altri restano,
+  come previsto; i casi con regex non valida sono quindi `solo_js`, perché Python non ha un equivalente.
+- Il caso `budget-superato` della fixture ripete le offerte venti volte (800 righe): con 40 il controllo del
+  budget, che scatta ogni 200 offerte, non si sarebbe mai attivato.
+- A26 è verificato in `tests/test_dashboard_web.py`, creato qui con i soli controlli su `filtri.js`; in S4 lo
+  stesso file copre anche HTML e CSS.
+
+### Test
+
+192 prima, **227 dopo** (+35). `tests/test_dashboard_js.py` (6 test per 4 motori = 24) e
+`tests/test_dashboard_web.py` (11: 9 identificatori vietati, lookbehind, superficie esposta).
+
+Python è l'oracolo: per i 36 casi non `solo_js` nessun esito è scritto a mano. `test_parita_con_python`
+costruisce la `Rule` equivalente allo stato e confronta la sequenza di id, ordine compreso;
+`test_yaml_andata_e_ritorno` scrive lo YAML prodotto dal JS sotto `regole:` in una config temporanea, la carica
+con `load_config` e confronta di nuovo; `test_preset_da_regola` fa lo stesso partendo da `statoDaRegola`.
+`test_regex_come_python` confronta 22 vettori con `re.search(src, testo, re.I)`.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 227 passed in 0,87 s |
+| motori trovati | gjs, node, deno, bun: tutti e quattro danno gli stessi id su tutti i casi |
+| controllo trattini | nessuna riga |
+| `uv run offerte --help` | ok |
+| `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |
+
+A21, A22, A23, A24, A25 e A26 soddisfatti.
+
+### Lasciato aperto
+
+`dashboard.html`, `dashboard.css` e `dashboard.js` sono ancora segnaposto: S4.

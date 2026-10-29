@@ -1,0 +1,1327 @@
+{
+ "adesso": 1793000000,
+ "fonti": [
+  {
+   "nome": "mttvideo",
+   "cartella": "Informatica"
+  },
+  {
+   "nome": "prezzitech",
+   "cartella": "informatica"
+  },
+  {
+   "nome": "erroridiprezzo",
+   "cartella": "Casa"
+  },
+  {
+   "nome": "mttcasa",
+   "cartella": "casa",
+   "attivo": false
+  },
+  {
+   "nome": "casa",
+   "cartella": "cina"
+  },
+  {
+   "nome": "on",
+   "cartella": "raffica"
+  },
+  {
+   "nome": "no",
+   "cartella": "raffica"
+  }
+ ],
+ "offerte": [
+  {
+   "id": 1,
+   "t": 1792999280,
+   "n": "SSD Samsung 980 PRO 1TB",
+   "x": "SSD Samsung 980 PRO 1TB NVMe\n49,99€ invece di 129,99€\nCoupon: SSD10",
+   "k": [
+    "mttvideo"
+   ],
+   "p": 49.99,
+   "b": 129.99,
+   "s": 62,
+   "c": "SSD10",
+   "u": "https://www.amazon.it/dp/B000000001"
+  },
+  {
+   "id": 2,
+   "t": 1792998200,
+   "n": "SSD Crucial P3 2TB",
+   "x": "SSD Crucial P3 2 TB NVMe PCIe\n59,00€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 59.0,
+   "u": "https://www.amazon.it/dp/B000000002"
+  },
+  {
+   "id": 3,
+   "t": 1792994600,
+   "n": "NVMe WD Black 1TB",
+   "x": "NVMe WD Black SN770 1TB\n72,00€",
+   "k": [
+    "mttvideo",
+    "prezzitech"
+   ],
+   "p": 72.0,
+   "s": 20,
+   "u": "https://www.amazon.it/dp/B000000003"
+  },
+  {
+   "id": 4,
+   "t": 1792991000,
+   "n": "Apple Watch SE 2024",
+   "x": "Apple Watch SE 2024 40mm\n199,00€\nsconto 30%",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 199.0,
+   "s": 30,
+   "u": "https://www.amazon.it/dp/B000000004"
+  },
+  {
+   "id": 5,
+   "t": 1792985600,
+   "n": "Apple Watch Series 9",
+   "x": "Apple Watch Series 9 45mm, prezzo: shock\n389,00€",
+   "k": [
+    "mttvideo"
+   ],
+   "p": 389.0,
+   "u": "https://www.amazon.it/dp/B000000005"
+  },
+  {
+   "id": 6,
+   "t": 1792982000,
+   "n": "Cinturino per Apple Watch",
+   "x": "Cinturino per Apple Watch 44mm in silicone\n9,99€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 9.99,
+   "s": 50,
+   "u": "https://www.amazon.it/dp/B000000006"
+  },
+  {
+   "id": 7,
+   "t": 1792974800,
+   "n": "Macchina del caffè De'Longhi",
+   "x": "Macchina del caffè De'Longhi Magnifica\nun caffè come al bar\n249,00€",
+   "k": [
+    "erroridiprezzo"
+   ],
+   "p": 249.0,
+   "b": 349.0,
+   "s": 28,
+   "u": "https://www.amazon.it/dp/B000000007"
+  },
+  {
+   "id": 8,
+   "t": 1792967600,
+   "n": "Guida di Città del Capo",
+   "x": "Città del Capo, guida di viaggio illustrata\n12,50€",
+   "k": [
+    "mttcasa"
+   ],
+   "p": 12.5,
+   "u": "https://www.amazon.it/dp/B000000008"
+  },
+  {
+   "id": 9,
+   "t": 1792960400,
+   "n": "Manuale di C++ moderno",
+   "x": "Manuale di programmazione in C++ moderno, 24x39g, cioccolato in omaggio\n29,90€",
+   "k": [
+    "casa"
+   ],
+   "p": 29.9,
+   "c": "LIBRI15",
+   "u": "https://www.amazon.it/dp/B000000009"
+  },
+  {
+   "id": 10,
+   "t": 1792953200,
+   "n": "Pallone da football americano",
+   "x": "Pallone da football americano Wilson NFL\n34,90€",
+   "k": [
+    "on"
+   ],
+   "p": 34.9,
+   "u": "https://www.amazon.it/dp/B000000010"
+  },
+  {
+   "id": 11,
+   "t": 1792946000,
+   "n": "Watchè orologio da parete",
+   "x": "Watchè orologio da parete design, non è uno smartwatch\n19,00€",
+   "k": [
+    "no"
+   ],
+   "p": 19.0,
+   "u": "https://www.amazon.it/dp/B000000011"
+  },
+  {
+   "id": 12,
+   "t": 1792928000,
+   "n": "Offerta senza prezzo",
+   "x": "Offerta a sorpresa del giorno, prezzo in pagina\nSSD e NVMe vari",
+   "k": [
+    "mttvideo"
+   ],
+   "u": "https://www.amazon.it/dp/B000000012"
+  },
+  {
+   "id": 13,
+   "t": 1792906400,
+   "n": "Powerbank Anker 20000",
+   "x": "Powerbank Anker 20000 mAh 65 W #ad\n39,99€ invece di 59,99€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 39.99,
+   "b": 59.99,
+   "s": 33,
+   "u": "https://www.amazon.it/dp/B000000013"
+  },
+  {
+   "id": 14,
+   "t": 1792892000,
+   "n": "Friggitrice ad aria Ninja",
+   "x": "Friggitrice ad aria Ninja 7,6 litri\n129,00€\nerrore di prezzo",
+   "k": [
+    "erroridiprezzo"
+   ],
+   "p": 129.0,
+   "s": 45,
+   "c": "NINJA20",
+   "u": "https://www.amazon.it/dp/B000000014"
+  },
+  {
+   "id": 15,
+   "t": 1792856000,
+   "n": "Monitor LG UltraGear 27",
+   "x": "Monitor LG UltraGear 27 pollici 180 Hz\n219,00€",
+   "k": [
+    "mttvideo"
+   ],
+   "p": 219.0,
+   "s": 15,
+   "u": "https://www.amazon.it/dp/B000000015"
+  },
+  {
+   "id": 16,
+   "t": 1792820000,
+   "n": "Mouse Logitech MX Master 3S",
+   "x": "Mouse Logitech MX Master 3S, l'offerta del giorno\n69,00€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 69.0,
+   "u": "https://www.amazon.it/dp/B000000016"
+  },
+  {
+   "id": 17,
+   "t": 1792784000,
+   "n": "Tastiera Keychron K2",
+   "x": "Tastiera meccanica Keychron K2\n79,00€\nno, non è un errore",
+   "k": [
+    "mttvideo"
+   ],
+   "p": 79.0,
+   "s": 10,
+   "u": "https://www.amazon.it/dp/B000000017"
+  },
+  {
+   "id": 18,
+   "t": 1792730000,
+   "n": "Set 123 pezzi per il bricolage",
+   "x": "Set 123 pezzi per il bricolage, cacciaviti e punte\n24,99€",
+   "k": [
+    "casa"
+   ],
+   "p": 24.99,
+   "u": "https://www.amazon.it/dp/B000000018"
+  },
+  {
+   "id": 19,
+   "t": 1792676000,
+   "n": "Gratis con il coupon",
+   "x": "Campione omaggio, lo paghi 0 euro con il coupon\n0,00€",
+   "k": [
+    "erroridiprezzo"
+   ],
+   "p": 0.0,
+   "c": "FREE01",
+   "u": "https://www.amazon.it/dp/B000000019"
+  },
+  {
+   "id": 20,
+   "t": 1792640000,
+   "n": "Televisore Hisense 55 QLED",
+   "x": "Televisore Hisense 55 pollici QLED\n399,00€ invece di 699,00€",
+   "k": [
+    "mttcasa"
+   ],
+   "p": 399.0,
+   "b": 699.0,
+   "s": 43,
+   "u": "https://www.amazon.it/dp/B000000020"
+  },
+  {
+   "id": 21,
+   "t": 1792604000,
+   "n": "Zaino antifurto 15,6",
+   "x": "Zaino antifurto da 15,6 pollici con porta USB\n29,99€",
+   "k": [
+    "on"
+   ],
+   "p": 29.99,
+   "s": 55,
+   "c": "ZAINO5",
+   "u": "https://www.amazon.it/dp/B000000021"
+  },
+  {
+   "id": 22,
+   "t": 1792568000,
+   "n": "Scheda microSD SanDisk 512",
+   "x": "Scheda microSD SanDisk 512 GB, 1 TB disponibile a parte\n44,90€",
+   "k": [
+    "no"
+   ],
+   "p": 44.9,
+   "u": "https://www.amazon.it/dp/B000000022"
+  },
+  {
+   "id": 23,
+   "t": 1792532000,
+   "n": "Offerta con cifre arabe",
+   "x": "Sconto del ٣٤ per cento sul set da cucina, offerta finale",
+   "k": [
+    "casa"
+   ],
+   "p": 59.0,
+   "u": "https://www.amazon.it/dp/B000000023"
+  },
+  {
+   "id": 24,
+   "t": 1792496000,
+   "n": "SSD maiuscolo",
+   "x": "SSD ESTERNO SAMSUNG T7 1TB, VELOCITÀ 1050 MB/S\n89,00€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 89.0,
+   "s": 25,
+   "u": "https://www.amazon.it/dp/B000000024"
+  },
+  {
+   "id": 25,
+   "t": 1792460000,
+   "n": "Aspirapolvere Dyson V12",
+   "x": "Aspirapolvere senza filo Dyson V12 Detect Slim\n449,00€",
+   "k": [
+    "mttvideo"
+   ],
+   "p": 449.0,
+   "u": "https://www.amazon.it/dp/B000000025"
+  },
+  {
+   "id": 26,
+   "t": 1792424000,
+   "n": "Robot Xiaomi S20",
+   "x": "Robot aspirapolvere Xiaomi S20, offerta finale",
+   "k": [
+    "erroridiprezzo"
+   ],
+   "s": 35,
+   "u": "https://www.amazon.it/dp/B000000026"
+  },
+  {
+   "id": 27,
+   "t": 1792388000,
+   "n": "Cuffie Sony WH-1000XM5",
+   "x": "Cuffie Sony WH-1000XM5 bluetooth\n249,00€",
+   "k": [
+    "casa",
+    "mttvideo"
+   ],
+   "p": 249.0,
+   "c": "SONY10",
+   "u": "https://www.amazon.it/dp/B000000027"
+  },
+  {
+   "id": 28,
+   "t": 1792352000,
+   "n": "Smartphone Redmi Note 14",
+   "x": "Smartphone Xiaomi Redmi Note 14 Pro 256 GB\n249,00€",
+   "k": [
+    "on"
+   ],
+   "p": 249.0,
+   "s": 20,
+   "u": "https://www.amazon.it/dp/B000000028"
+  },
+  {
+   "id": 29,
+   "t": 1792280000,
+   "n": "Pentole antiaderenti",
+   "x": "Set di pentole antiaderenti 10 pezzi\n64,90€",
+   "k": [
+    "no"
+   ],
+   "p": 64.9,
+   "u": "https://www.amazon.it/dp/B000000029"
+  },
+  {
+   "id": 30,
+   "t": 1792208000,
+   "n": "Caffè Lavazza 20 cialde",
+   "x": "Caffè Lavazza Qualità Rossa, 20 cialde\n4,90€",
+   "k": [
+    "erroridiprezzo"
+   ],
+   "p": 4.9,
+   "u": "https://www.amazon.it/dp/B000000030"
+  },
+  {
+   "id": 31,
+   "t": 1792136000,
+   "n": "Hub USB-C 8 in 1",
+   "x": "Hub USB-C 8 in 1 con HDMI 4K\n25,99€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 25.99,
+   "s": 40,
+   "c": "HUB8",
+   "u": "https://www.amazon.it/dp/B000000031"
+  },
+  {
+   "id": 32,
+   "t": 1792064000,
+   "n": "Lampada da scrivania",
+   "x": "Lampada da scrivania a LED, luce calda e fredda\n18,99€",
+   "k": [
+    "mttcasa"
+   ],
+   "p": 18.99,
+   "u": "https://www.amazon.it/dp/B000000032"
+  },
+  {
+   "id": 33,
+   "t": 1791992000,
+   "n": "Offerta che finisce finale",
+   "x": "Qualcosa di strano che finisce finale",
+   "k": [
+    "casa"
+   ],
+   "u": "https://www.amazon.it/dp/B000000033"
+  },
+  {
+   "id": 34,
+   "t": 1791920000,
+   "n": "Sedia ergonomica",
+   "x": "Sedia ergonomica da ufficio con supporto lombare\n159,00€",
+   "k": [
+    "on"
+   ],
+   "p": 159.0,
+   "s": 22,
+   "u": "https://www.amazon.it/dp/B000000034"
+  },
+  {
+   "id": 35,
+   "t": 1791848000,
+   "n": "Microfono USB",
+   "x": "Microfono USB a condensatore per podcast\n54,00€",
+   "k": [
+    "no"
+   ],
+   "p": 54.0,
+   "c": "MIC7",
+   "u": "https://www.amazon.it/dp/B000000035"
+  },
+  {
+   "id": 36,
+   "t": 1791776000,
+   "n": "SSD interno 2TB in sconto",
+   "x": "SSD interno 2TB NVMe, 2 TB veri\n99,00€",
+   "k": [
+    "mttvideo"
+   ],
+   "p": 99.0,
+   "s": 60,
+   "u": "https://www.amazon.it/dp/B000000036"
+  },
+  {
+   "id": 37,
+   "t": 1791740000,
+   "n": "Borraccia termica",
+   "x": "Borraccia termica in acciaio da 750 ml\n14,90€",
+   "k": [
+    "erroridiprezzo"
+   ],
+   "p": 14.9,
+   "u": "https://www.amazon.it/dp/B000000037"
+  },
+  {
+   "id": 38,
+   "t": 1791704000,
+   "n": "Proiettore portatile",
+   "x": "Proiettore portatile full HD con Android TV\n179,00€",
+   "k": [
+    "casa"
+   ],
+   "p": 179.0,
+   "s": 38,
+   "c": "PROJ30",
+   "u": "https://www.amazon.it/dp/B000000038"
+  },
+  {
+   "id": 39,
+   "t": 1791632000,
+   "n": "Spazzolino elettrico",
+   "x": "Spazzolino elettrico Oral-B Pro 3\n39,90€",
+   "k": [
+    "mttcasa"
+   ],
+   "p": 39.9,
+   "s": 50,
+   "u": "https://www.amazon.it/dp/B000000039"
+  },
+  {
+   "id": 40,
+   "t": 1791560000,
+   "n": "Offerta a 0 euro senza coupon",
+   "x": "Omaggio per i primi cento, 0 euro\n0,00€",
+   "k": [
+    "prezzitech"
+   ],
+   "p": 0.0,
+   "u": "https://www.amazon.it/dp/B000000040"
+  }
+ ],
+ "casi": [
+  {
+   "nome": "parola-accentata-caffe",
+   "stato": {
+    "q": [
+     "caffè"
+    ]
+   }
+  },
+  {
+   "nome": "parola-accentata-citta",
+   "stato": {
+    "q": [
+     "città"
+    ]
+   }
+  },
+  {
+   "nome": "parola-cpp",
+   "stato": {
+    "q": [
+     "c++"
+    ]
+   }
+  },
+  {
+   "nome": "tb-contro-football",
+   "stato": {
+    "q": [
+     "tb"
+    ]
+   }
+  },
+  {
+   "nome": "maiuscole",
+   "stato": {
+    "q": [
+     "VELOCITÀ"
+    ]
+   }
+  },
+  {
+   "nome": "regex-confine",
+   "stato": {
+    "q": [
+     "/\\bssd\\b/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-spazi",
+   "stato": {
+    "q": [
+     "/\\d\\s?tb\\b/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-alternanza-classe",
+   "stato": {
+    "q": [
+     "/\\b[12]\\s?tb\\b/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-cifre-unicode",
+   "stato": {
+    "q": [
+     "/\\d{2} per cento/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-gruppo-nominato",
+   "stato": {
+    "q": [
+     "/(?P<marca>ssd|nvme)/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-flag-iniziale",
+   "stato": {
+    "q": [
+     "/(?i)ssd/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-ancora-A",
+   "stato": {
+    "q": [
+     "/\\ASSD/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-ancora-Z",
+   "stato": {
+    "q": [
+     "/finale\\Z/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-caffe-accentata",
+   "stato": {
+    "q": [
+     "/\\bcaff[eè]\\b/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-watch-contro-watche",
+   "stato": {
+    "q": [
+     "/\\bwatch\\b/"
+    ]
+   }
+  },
+  {
+   "nome": "regex-apici",
+   "stato": {
+    "q": [
+     "/l'offerta\\s+del/"
+    ]
+   }
+  },
+  {
+   "nome": "escludi",
+   "stato": {
+    "q": [
+     "apple watch"
+    ],
+    "no": [
+     "cinturino"
+    ]
+   }
+  },
+  {
+   "nome": "tutte-con-una-parola",
+   "stato": {
+    "q": [
+     "ssd"
+    ],
+    "tutte": true
+   }
+  },
+  {
+   "nome": "tutte-due-parole",
+   "stato": {
+    "q": [
+     "ssd",
+     "nvme"
+    ],
+    "tutte": true
+   }
+  },
+  {
+   "nome": "prezzo-massimo",
+   "stato": {
+    "q": [
+     "ssd"
+    ],
+    "pmax": 60.0
+   }
+  },
+  {
+   "nome": "prezzo-minimo-zero",
+   "stato": {
+    "pmin": 0.0
+   }
+  },
+  {
+   "nome": "prezzo-min-e-max",
+   "stato": {
+    "pmin": 20.0,
+    "pmax": 60.0
+   }
+  },
+  {
+   "nome": "sconto-minimo",
+   "stato": {
+    "smin": 40
+   }
+  },
+  {
+   "nome": "solo-coupon",
+   "stato": {
+    "cp": true
+   }
+  },
+  {
+   "nome": "sconto-piu-coupon",
+   "stato": {
+    "smin": 30,
+    "cp": true
+   }
+  },
+  {
+   "nome": "canale-singolo",
+   "stato": {
+    "can": [
+     "mttvideo"
+    ]
+   }
+  },
+  {
+   "nome": "cartella",
+   "stato": {
+    "cart": [
+     "informatica"
+    ]
+   }
+  },
+  {
+   "nome": "cartelle-multiple",
+   "stato": {
+    "cart": [
+     "informatica",
+     "raffica"
+    ]
+   }
+  },
+  {
+   "nome": "cartella-piu-canale",
+   "stato": {
+    "cart": [
+     "raffica"
+    ],
+    "can": [
+     "mttvideo"
+    ]
+   }
+  },
+  {
+   "nome": "cartella-maiuscola-in-config",
+   "stato": {
+    "cart": [
+     "informatica"
+    ],
+    "q": [
+     "ssd"
+    ]
+   }
+  },
+  {
+   "nome": "cartella-come-canale",
+   "stato": {
+    "cart": [
+     "casa"
+    ]
+   }
+  },
+  {
+   "nome": "canali-on-e-no",
+   "stato": {
+    "can": [
+     "on",
+     "no"
+    ]
+   }
+  },
+  {
+   "nome": "parole-no-e-123",
+   "stato": {
+    "q": [
+     "no",
+     "123"
+    ]
+   }
+  },
+  {
+   "nome": "parole-con-punteggiatura",
+   "stato": {
+    "q": [
+     "24x39g, cioccolato",
+     "prezzo: shock",
+     "#ad"
+    ]
+   }
+  },
+  {
+   "nome": "solo-criteri-numerici",
+   "stato": {
+    "pmax": 30.0,
+    "smin": 20
+   }
+  },
+  {
+   "nome": "nessun-criterio",
+   "stato": {}
+  },
+  {
+   "nome": "periodo-24h",
+   "stato": {
+    "per": "24h"
+   },
+   "solo_js": true,
+   "attesi": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "nome": "periodo-1h",
+   "stato": {
+    "per": "1h"
+   },
+   "solo_js": true,
+   "attesi": [
+    1,
+    2
+   ]
+  },
+  {
+   "nome": "periodo-7g",
+   "stato": {
+    "per": "7g",
+    "can": [
+     "no"
+    ]
+   },
+   "solo_js": true,
+   "attesi": [
+    11,
+    22
+   ]
+  },
+  {
+   "nome": "ordine-prezzo-asc",
+   "stato": {
+    "can": [
+     "mttcasa"
+    ],
+    "ord": "prezzo-asc"
+   },
+   "solo_js": true,
+   "attesi": [
+    8,
+    32,
+    39,
+    20
+   ]
+  },
+  {
+   "nome": "ordine-prezzo-desc",
+   "stato": {
+    "can": [
+     "mttcasa"
+    ],
+    "ord": "prezzo-desc"
+   },
+   "solo_js": true,
+   "attesi": [
+    20,
+    39,
+    32,
+    8
+   ]
+  },
+  {
+   "nome": "ordine-sconto-desc",
+   "stato": {
+    "can": [
+     "mttcasa"
+    ],
+    "ord": "sconto-desc"
+   },
+   "solo_js": true,
+   "attesi": [
+    39,
+    20,
+    8,
+    32
+   ]
+  },
+  {
+   "nome": "ordine-sconto-asc",
+   "stato": {
+    "can": [
+     "mttcasa"
+    ],
+    "ord": "sconto-asc"
+   },
+   "solo_js": true,
+   "attesi": [
+    20,
+    39,
+    8,
+    32
+   ]
+  },
+  {
+   "nome": "ordine-data-asc",
+   "stato": {
+    "can": [
+     "mttcasa"
+    ],
+    "ord": "data-asc"
+   },
+   "solo_js": true,
+   "attesi": [
+    39,
+    32,
+    20,
+    8
+   ]
+  },
+  {
+   "nome": "ordine-data-desc",
+   "stato": {
+    "can": [
+     "mttcasa"
+    ],
+    "ord": "data-desc"
+   },
+   "solo_js": true,
+   "attesi": [
+    8,
+    20,
+    32,
+    39
+   ]
+  },
+  {
+   "nome": "contatore-senza-prezzo",
+   "stato": {
+    "pmax": 1000.0,
+    "can": [
+     "mttvideo"
+    ]
+   },
+   "solo_js": true,
+   "attesi": [
+    1,
+    3,
+    5,
+    15,
+    17,
+    25,
+    27,
+    36
+   ]
+  },
+  {
+   "nome": "contatore-senza-sconto",
+   "stato": {
+    "smin": 1,
+    "can": [
+     "erroridiprezzo"
+    ]
+   },
+   "solo_js": true,
+   "attesi": [
+    7,
+    14,
+    26
+   ]
+  },
+  {
+   "nome": "budget-superato",
+   "stato": {},
+   "solo_js": true,
+   "ora_finta": true,
+   "passo_ms": 900,
+   "budget_ms": 1500,
+   "ripeti": 20
+  },
+  {
+   "nome": "togli-prezzo",
+   "stato": {
+    "q": [
+     "ssd"
+    ],
+    "pmax": 60.0,
+    "smin": 20
+   },
+   "solo_js": true,
+   "togli": "prezzo",
+   "attesi": [
+    1
+   ]
+  },
+  {
+   "nome": "regex-non-valida",
+   "stato": {
+    "q": [
+     "/(/",
+     "ssd"
+    ]
+   },
+   "solo_js": true,
+   "attesi": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40
+   ]
+  },
+  {
+   "nome": "canale-sparito",
+   "stato": {
+    "can": [
+     "mttvideo"
+    ],
+    "cart": [
+     "sparita"
+    ],
+    "q": [
+     "ssd"
+    ]
+   },
+   "solo_js": true,
+   "attesi": [
+    1,
+    12,
+    36
+   ]
+  }
+ ],
+ "url": [
+  {},
+  {
+   "q": [
+    "apple watch",
+    "/\\bwatch\\s*(se|ultra)\\b/"
+   ],
+   "no": [
+    "cinturino",
+    "cover"
+   ],
+   "pmax": 250.0,
+   "per": "7g",
+   "ord": "prezzo-asc"
+  },
+  {
+   "q": [
+    "ssd"
+   ],
+   "tutte": true,
+   "pmin": 0.0,
+   "smin": 30,
+   "cp": true
+  },
+  {
+   "cart": [
+    "informatica",
+    "casa"
+   ],
+   "can": [
+    "on",
+    "no"
+   ],
+   "ord": "sconto-desc"
+  },
+  {
+   "q": [
+    "caffè & tè",
+    "a=b&c=d"
+   ],
+   "pmin": 19.99,
+   "pmax": 250.5
+  },
+  {
+   "per": "1h",
+   "ord": "data-asc"
+  }
+ ],
+ "url_invalidi": [
+  {
+   "search": "pmin=abc&pmax=-5&smin=0",
+   "atteso": {}
+  },
+  {
+   "search": "smin=100&per=99h&ord=boh",
+   "atteso": {}
+  },
+  {
+   "search": "cart=sconosciuta&can=sparito",
+   "atteso": {}
+  },
+  {
+   "search": "pmin=250&pmax=20",
+   "atteso": {
+    "pmin": 20.0,
+    "pmax": 250.0
+   }
+  },
+  {
+   "search": "?q=ssd&chiave_ignota=1&tutte=2",
+   "atteso": {
+    "q": [
+     "ssd"
+    ]
+   }
+  },
+  {
+   "search": "q=apple+watch&no=%2Fcover%2F",
+   "atteso": {
+    "q": [
+     "apple watch"
+    ],
+    "no": [
+     "/cover/"
+    ]
+   }
+  },
+  {
+   "search": "q=%E0%A4%A",
+   "atteso": {
+    "q": [
+     "%E0%A4%A"
+    ]
+   }
+  },
+  {
+   "search": "cart=Informatica,INFORMATICA&can=MTTVIDEO",
+   "atteso": {
+    "cart": [
+     "informatica"
+    ],
+    "can": [
+     "mttvideo"
+    ]
+   }
+  }
+ ],
+ "regex": [
+  {
+   "src": "\\bcaff[eè]\\b",
+   "testo": "un caffè "
+  },
+  {
+   "src": "\\bwatch\\b",
+   "testo": "watchè"
+  },
+  {
+   "src": "\\bwatch\\b",
+   "testo": "un watch nuovo"
+  },
+  {
+   "src": "\\bssd\\b",
+   "testo": "SSD Samsung"
+  },
+  {
+   "src": "\\w+",
+   "testo": "città"
+  },
+  {
+   "src": "\\W",
+   "testo": "città"
+  },
+  {
+   "src": "\\d{2}",
+   "testo": "٣٤ per cento"
+  },
+  {
+   "src": "\\D",
+   "testo": "12a"
+  },
+  {
+   "src": "(?P<marca>ssd|nvme)",
+   "testo": "nvme veloce"
+  },
+  {
+   "src": "(?i)ssd",
+   "testo": "ssd"
+  },
+  {
+   "src": "\\AOfferta",
+   "testo": "Offerta del giorno"
+  },
+  {
+   "src": "finale\\Z",
+   "testo": "offerta finale"
+  },
+  {
+   "src": "finale\\Z",
+   "testo": "finale e poi altro"
+  },
+  {
+   "src": "l'offerta\\s+del",
+   "testo": "l'offerta  del giorno"
+  },
+  {
+   "src": "prezzo\\:\\s*shock",
+   "testo": "prezzo: shock"
+  },
+  {
+   "src": "24x39g\\,\\s*cioccolato",
+   "testo": "24x39g, cioccolato"
+  },
+  {
+   "src": "\\B\\d",
+   "testo": "a1"
+  },
+  {
+   "src": "[\\w-]+",
+   "testo": "wh-1000xm5"
+  },
+  {
+   "src": "(",
+   "testo": "qualsiasi"
+  },
+  {
+   "src": "(?m)ssd",
+   "testo": "ssd"
+  },
+  {
+   "src": "a{2,3}",
+   "testo": "aaa"
+  },
+  {
+   "src": "\\s{2}",
+   "testo": "a  b"
+  }
+ ],
+ "regole": [
+  {
+   "nome": "ssd-sotto-60",
+   "parole": [
+    "ssd",
+    "nvme",
+    "/\\b[12]\\s?tb\\b/"
+   ],
+   "escludi": [],
+   "canali": [
+    "informatica"
+   ],
+   "tutte": false,
+   "solo_coupon": false,
+   "prezzo_max": 60.0
+  },
+  {
+   "nome": "apple-watch-sotto-250",
+   "parole": [
+    "apple watch",
+    "/\\bwatch\\s*(se|series|ultra)\\b/"
+   ],
+   "escludi": [
+    "cinturino",
+    "cover"
+   ],
+   "canali": [],
+   "tutte": false,
+   "solo_coupon": false,
+   "prezzo_max": 250.0
+  },
+  {
+   "nome": "errori-di-prezzo",
+   "parole": [
+    "errore di prezzo",
+    "/sconto:?\\s*[7-9]\\d\\s?%/"
+   ],
+   "escludi": [],
+   "canali": [
+    "erroridiprezzo",
+    "casa"
+   ],
+   "tutte": false,
+   "solo_coupon": false
+  },
+  {
+   "nome": "coupon-forti",
+   "parole": [],
+   "escludi": [],
+   "canali": [],
+   "tutte": false,
+   "solo_coupon": true,
+   "sconto_min": 40
+  }
+ ]
+}
