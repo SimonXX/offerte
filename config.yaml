@@ -14,6 +14,7 @@ parametri:
   dashboard: true                 # scrive dashboard.json e la pagina dei filtri in var/feeds/
   dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
+  # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
 
 canali:
   # Verificati il 28.10.2026: anteprima pubblica attiva e post recenti. Volume indicativo in messaggi al giorno.

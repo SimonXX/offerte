@@ -50,6 +50,7 @@ parametri:
   dashboard: true                 # scrive dashboard.json e la pagina dei filtri in var/feeds/
   dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
+  # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
 
 canali:
   - {nome: mttvideo,            cartella: informatica}   # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
@@ -290,7 +291,7 @@ link»:
 | `smin` | sconto minimo in percentuale, da 1 a 99 |
 | `cart` | cartelle separate da virgola |
 | `can` | canali separati da virgola, in unione con le cartelle |
-| `per` | `1h 3h 6h 12h 24h 48h 3g 7g` |
+| `per` | `<numero>h` o `<numero>g`, per esempio `12h` o `30g` |
 | `cp` | `1` per le sole offerte con coupon |
 | `ord` | `data-desc data-asc prezzo-asc prezzo-desc sconto-desc sconto-asc` |
 
@@ -305,6 +306,17 @@ prima di 16.4) la regex si compila senza regole Unicode e `\b` vale solo per le 
 «Crea regola» prende i filtri correnti e produce il blocco YAML da incollare sotto `regole:` in `config.yaml`: le
 soglie di prezzo e sconto, il coupon, i canali e le parole, con la quotatura giusta. Il periodo non si esporta,
 perché una regola non ha un periodo. I pulsanti in cima sono le regole già in config: un clic ne riapplica i filtri.
+
+Il menu **Periodo** non è una lista fissa: si costruisce dalla finestra dei dati. La prima voce dice quanto è
+larga («Tutto il periodo (14 giorni)») e i gradini arrivano fino a lì, quindi alzando la finestra compaiono da soli
+«Ultimi 14 giorni», «Ultimi 30 giorni» e così via. Un periodo scritto a mano nell'indirizzo (`?per=45g`) vale
+comunque, anche se non è fra i gradini.
+
+La finestra della dashboard è staccata da quella dei feed. `feed_giorni` governa RSS e JSON Feed e la valutazione
+delle regole a ogni giro; `dashboard_giorni`, se lo imposti, governa solo la pagina. Serve perché il database
+conserva `giorni_ritenzione` giorni (90 di default) mentre i feed ne mostrano 14: con `dashboard_giorni: 60` la
+pagina filtra su due mesi senza allargare i feed né far rivalutare le regole su due mesi di offerte a ogni giro.
+Il prezzo è la dimensione del file, che cresce in proporzione: circa 1 KB per offerta.
 
 `offerte feed` rigenera feed, OPML e `dashboard.json` dal database senza toccare la rete: serve per provare la pagina
 dopo aver cambiato una regola. Con `dashboard: false` nei parametri la pagina e i suoi file non si scrivono (e si

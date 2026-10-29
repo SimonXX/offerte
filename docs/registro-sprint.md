@@ -509,3 +509,60 @@ contiene solo quei test, nient'altro. **Deviazione: i commit nuovi sono otto, no
 | `uv run pytest -q` | 301 passed in 36,5 s |
 | controllo trattini | nessuna riga |
 | `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |
+
+## S8, finestra temporale comandabile dalla pagina
+
+Data: 29 ottobre 2026.
+
+### Decisione presa
+
+La dashboard resta in **sola lettura**. Un endpoint che scrive `config.yaml` sarebbe, nei fatti, un endpoint
+che esegue comandi arbitrari, perché la config ammette fonti di tipo `comando`; con `serve --host 0.0.0.0` quella
+porta è aperta anche alla rete locale e non c'è autenticazione. Renderla sicura vuol dire sessioni, CSRF e un
+segreto da gestire: troppo, per cambiare un interruttore che si tocca una volta ogni tanto stando al PC. Dove
+serve, la pagina genera il testo da incollare, come fa già «Crea regola». Se la comodità mancherà davvero, la
+versione difendibile è un endpoint locale ristretto a interruttori booleani su canali e regole che esistono già,
+mai stringhe libere, e si farà con il suo sprint.
+
+### Cosa è stato fatto
+
+Il menu Periodo si fermava a 7 giorni mentre la pagina ne conteneva 14 e il database 90. Due interventi.
+
+`dashboard_giorni` in `Params`, assente di default: la finestra della pagina si stacca da quella dei feed.
+`feed_giorni` continua a governare RSS, JSON Feed e la valutazione delle regole a ogni giro; `dashboard_giorni`
+governa solo `dashboard.json` e il campo `finestra_giorni`. Serviva perché alzare `feed_giorni` a 60 avrebbe
+fatto rivalutare le regole su due mesi di offerte ogni dieci minuti, per un effetto che riguarda solo la pagina.
+Minore di 1 è `ConfigError`.
+
+I periodi diventano generici: `periodoSecondi` riconosce `<numero>h` e `<numero>g` da 1 a 999 invece di
+consultare una tabella fissa, e `leggiUrl` accetta di conseguenza. Il menu si costruisce a ogni caricamento dalla
+scala 1h, 3h, 6h, 12h, 24h, 48h, 3g, 7g, 14g, 30g, 60g, 90g tenendo i gradini più stretti di `finestra_giorni`;
+la prima voce dichiara la finestra («Tutto il periodo (60 giorni)»). Un `per` che arriva dall'URL fuori scala si
+aggiunge in coda invece di sparire in silenzio.
+
+### Test
+
+301 prima, **305 dopo** (+4): `dashboard_giorni` che allarga la finestra lasciando i feed dov'erano,
+`dashboard_giorni` assente che segue `feed_giorni`, `dashboard_giorni: 0` rifiutato, e la scala dei periodi nel
+JS. Più la fixture del motore: `per=99h` non è più un valore da scartare (ora è un periodo valido di 99 ore), al
+suo posto c'è `per=boh`, e sono stati aggiunti un andata e ritorno con `per=30g` e un caso `solo_js` con `90g`.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 305 passed in 36,9 s |
+| controllo trattini | nessuna riga |
+| demo con `dashboard_giorni: 60`, menu letto in Chrome | voci fino a `30g`, prima voce «Tutto il periodo (60 giorni)» |
+| `?per=48h`, `?per=7g` sulla stessa demo | 58 e 184 offerte su 403: il filtro stringe davvero |
+| `?per=90g` con finestra 60 | periodo conservato e mostrato come voce in coda |
+
+### Deviazioni
+
+La specifica fissava gli otto valori di `per` in §3.2, §3.5 e §3.7: corretta in tutti e tre i punti con la regola
+generica, e in §2.2 per `finestra_giorni`.
+
+### Nota di lavoro
+
+`pkill -f "offerte.*serve"` uccide anche la shell che lo esegue, perché il pattern combacia con la propria riga
+di comando. Si usa `pkill -x offerte`.

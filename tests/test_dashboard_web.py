@@ -156,3 +156,11 @@ def test_contrasti(tema):
     for davanti, dietro in COPPIE_CONTRASTO:
         rapporto = contrasto(colori["--" + davanti], colori["--" + dietro])
         assert rapporto >= 4.5, f"{tema}: {davanti} su {dietro} e' {rapporto:.2f}"
+
+
+def test_scala_dei_periodi_nel_js():
+    """Il menu Periodo si costruisce dalla finestra dei dati, non e' una lista fissa nell'HTML."""
+    js = sorgente("dashboard.js")
+    assert "SCALA_PERIODI" in js and "finestra_giorni" in js
+    gradini = re.findall(r'\{valore: "([0-9]+[hg])"', js)
+    assert gradini == ["1h", "3h", "6h", "12h", "24h", "48h", "3g", "7g", "14g", "30g", "60g", "90g"]

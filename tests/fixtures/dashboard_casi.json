@@ -1070,6 +1070,55 @@
     12,
     36
    ]
+  },
+  {
+   "nome": "periodo-lungo-oltre-i-dati",
+   "stato": {
+    "per": "90g"
+   },
+   "solo_js": true,
+   "attesi": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40
+   ]
   }
  ],
  "url": [
@@ -1118,6 +1167,10 @@
   {
    "per": "1h",
    "ord": "data-asc"
+  },
+  {
+   "per": "30g",
+   "ord": "sconto-asc"
   }
  ],
  "url_invalidi": [
@@ -1126,7 +1179,7 @@
    "atteso": {}
   },
   {
-   "search": "smin=100&per=99h&ord=boh",
+   "search": "smin=100&per=boh&ord=boh",
    "atteso": {}
   },
   {
@@ -1177,6 +1230,10 @@
      "mttvideo"
     ]
    }
+  },
+  {
+   "search": "per=0g&pmin=1e400",
+   "atteso": {}
   }
  ],
  "regex": [

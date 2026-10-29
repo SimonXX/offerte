@@ -6,12 +6,19 @@ Lo usano sia i test del motore (tests/test_dashboard_js.py) sia quelli della pag
 
 from __future__ import annotations
 
+import re
+
 from offerte.config import Rule, compile_keyword
 from offerte.rules import matches
 from offerte.store import Offer
 
-PERIODI = {"1h": 3600, "3h": 10800, "6h": 21600, "12h": 43200, "24h": 86400, "48h": 172800,
-           "3g": 259200, "7g": 604800}
+PERIODO_RE = re.compile(r"^([1-9][0-9]{0,2})(h|g)$")
+
+
+def periodo_secondi(per: str | None) -> int | None:
+    """Stessa regola di filtri.js: <numero>h oppure <numero>g."""
+    m = PERIODO_RE.match(per or "")
+    return int(m.group(1)) * (3600 if m.group(2) == "h" else 86400) if m else None
 
 
 def offerta(voce: dict) -> Offer:
@@ -60,7 +67,7 @@ def seleziona(voci: list[dict], stato: dict, cartelle: dict, adesso: int | None 
     """Gli id che la pagina deve mostrare, nell'ordine in cui deve mostrarli."""
     regola = regola_dello_stato(stato, cartelle)
     dentro = [v for v in voci if matches(regola, offerta(v))]
-    secondi = PERIODI.get(stato.get("per") or "")
+    secondi = periodo_secondi(stato.get("per"))
     if secondi is not None and adesso is not None:
         dentro = [v for v in dentro if v["t"] >= adesso - secondi]
     return [v["id"] for v in ordina(dentro, stato.get("ord") or "data-desc")]

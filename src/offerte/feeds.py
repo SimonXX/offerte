@@ -244,11 +244,12 @@ def write_dashboard(store: Store, config: Config, now: datetime) -> int:
         for nome in (*DASHBOARD_ASSET, "dashboard.json"):
             (base / nome).unlink(missing_ok=True)
         return 0
-    since = (now - timedelta(days=p.feed_giorni)).isoformat(timespec="seconds")
+    giorni = p.dashboard_giorni or p.feed_giorni  # la pagina può guardare più indietro dei feed
+    since = (now - timedelta(days=giorni)).isoformat(timespec="seconds")
     offers = store.offers_since(since)
     dati = dashboard_bytes(
         offers, dashboard_cartelle(config), dashboard_regole(config) if p.dashboard_regole else [],
-        dashboard_fonti(config, store), now, p.feed_giorni, p.dashboard_max_offerte)
+        dashboard_fonti(config, store), now, giorni, p.dashboard_max_offerte)
     for nome in DASHBOARD_ASSET:
         _copia_se_diverso(STATIC / nome, base / nome)
     _atomic_write(base / "dashboard.json", dati)  # per ultimo: la pagina non deve mai leggere dati più vecchi di sé

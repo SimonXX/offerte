@@ -60,6 +60,7 @@ class Params:
     dashboard: bool = True
     dashboard_regole: bool = True
     dashboard_max_offerte: int = 10000
+    dashboard_giorni: int | None = None  # finestra della dashboard; assente = quella dei feed
 
 
 @dataclass(frozen=True)
@@ -130,9 +131,12 @@ def load_config(path: Path | str) -> Config:
         dashboard=bool(raw.get("dashboard", True)),
         dashboard_regole=bool(raw.get("dashboard_regole", True)),
         dashboard_max_offerte=int(raw.get("dashboard_max_offerte", 10000)),
+        dashboard_giorni=None if raw.get("dashboard_giorni") is None else int(raw["dashboard_giorni"]),
     )
     if params.dashboard_max_offerte < 1:
         raise ConfigError("parametri: dashboard_max_offerte deve essere almeno 1")
+    if params.dashboard_giorni is not None and params.dashboard_giorni < 1:
+        raise ConfigError("parametri: dashboard_giorni deve essere almeno 1")
 
     _check_keys("config", data, {"canali", "fonti", "regole", "parametri"})
     from .sources import crea_fonte  # import ritardato: sources importa ConfigError da qui

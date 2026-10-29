@@ -268,3 +268,37 @@ def test_prestazioni_6000(tmp_path):
         durata = time.perf_counter() - inizio
     assert durata < 1.5, f"dashboard_bytes ha impiegato {durata:.2f} s"
     assert len(dati) < 8_000_000, f"dashboard.json di {len(dati)} byte"
+
+
+# --- finestra della dashboard staccata da quella dei feed ------------------
+
+def test_dashboard_giorni_allarga_la_finestra(tmp_path):
+    """La pagina può guardare più indietro dei feed: i feed restano a feed_giorni, il JSON no."""
+    config = config_demo(tmp_path, {"feed_giorni": 7, "dashboard_giorni": 60})
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        for giorni, chiave in ((2, "recente"), (20, "media"), (90, "antica")):
+            store.insert_offer(key=chiave, title=chiave, text="t", link=None, permalink="p", image=None,
+                               price=None, old_price=None, discount=None, coupon=None,
+                               posted_at=(NOW - timedelta(days=giorni)).isoformat(timespec="seconds"),
+                               channel="alfa", now="2026-01-01T00:00:00+00:00")
+        write_feeds(store, config, NOW)
+    doc = json.loads((config.parametri.var_dir / "feeds" / "dashboard.json").read_text(encoding="utf-8"))
+    assert doc["finestra_giorni"] == 60
+    assert sorted(o["n"] for o in doc["offerte"]) == ["media", "recente"]
+
+
+def test_dashboard_giorni_assente_segue_i_feed(tmp_path):
+    config = config_demo(tmp_path, {"feed_giorni": 21})
+    assert config.parametri.dashboard_giorni is None
+    with Store(":memory:") as store:
+        write_dashboard(store, config, NOW)
+    doc = json.loads((config.parametri.var_dir / "feeds" / "dashboard.json").read_text(encoding="utf-8"))
+    assert doc["finestra_giorni"] == 21
+
+
+def test_dashboard_giorni_non_valido(tmp_path):
+    (tmp_path / "brutta.yaml").write_text(
+        "parametri: {dashboard_giorni: 0}\ncanali: [{nome: a}]\nregole: [{nome: r, parole: [ssd]}]\n",
+        encoding="utf-8")
+    with pytest.raises(ConfigError, match="dashboard_giorni deve essere almeno 1"):
+        load_config(tmp_path / "brutta.yaml")

@@ -60,6 +60,23 @@
     chiudiDialogo: document.getElementById("chiudi-dialogo")
   };
 
+  // Scala del menu Periodo: si mostrano solo i gradini più stretti della finestra dei dati, che la
+  // pagina legge da dashboard.json. Alzando dashboard_giorni compaiono da soli i gradini più larghi.
+  var SCALA_PERIODI = [
+    {valore: "1h", testo: "Ultima ora"},
+    {valore: "3h", testo: "Ultime 3 ore"},
+    {valore: "6h", testo: "Ultime 6 ore"},
+    {valore: "12h", testo: "Ultime 12 ore"},
+    {valore: "24h", testo: "Ultime 24 ore"},
+    {valore: "48h", testo: "Ultime 48 ore"},
+    {valore: "3g", testo: "Ultimi 3 giorni"},
+    {valore: "7g", testo: "Ultimi 7 giorni"},
+    {valore: "14g", testo: "Ultimi 14 giorni"},
+    {valore: "30g", testo: "Ultimi 30 giorni"},
+    {valore: "60g", testo: "Ultimi 60 giorni"},
+    {valore: "90g", testo: "Ultimi 90 giorni"}
+  ];
+
   var euro = new Intl.NumberFormat("it-IT", {style: "currency", currency: "EUR"});
   var gruppiNumeri = new Intl.NumberFormat("it-IT");
 
@@ -216,6 +233,7 @@
       costruisciCaselle();
       primoCaricamento = false;
     }
+    costruisciPeriodi();
     mostraFonti();
     mostraAvvisi();
     if (!offerte.length) {
@@ -237,6 +255,26 @@
     return "aggiornato alle " + quando.toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"}) +
       ", " + quandoRelativo(dati.generato) + ", " + gruppiNumeri.format(offerte.length) + " " +
       plurale(offerte.length, "offerta", "offerte") + " in " + dati.finestra_giorni + " giorni";
+  }
+
+  function opzione(valore, testo) {
+    var o = document.createElement("option");
+    o.value = valore;
+    o.textContent = testo;
+    return o;
+  }
+
+  function costruisciPeriodi() {
+    var giorni = dati.finestra_giorni || 14;
+    var finestra = giorni * 86400;
+    var scelti = SCALA_PERIODI.filter(function (v) { return F.periodoSecondi(v.valore) < finestra; });
+    var presenti = scelti.map(function (v) { return v.valore; });
+    if (stato.per !== null && presenti.indexOf(stato.per) === -1) {
+      scelti.push({valore: stato.per, testo: "Periodo dall'indirizzo: " + stato.per});
+    }
+    svuota(DOM.per);
+    DOM.per.appendChild(opzione("", "Tutto il periodo (" + giorni + " giorni)"));
+    scelti.forEach(function (v) { DOM.per.appendChild(opzione(v.valore, v.testo)); });
   }
 
   function calcolaConteggi() {

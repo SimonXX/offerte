@@ -95,7 +95,7 @@ Campi di testa:
 |:--|:--|:--|
 | `v` | int | versione del contratto, oggi `1` (costante `DASHBOARD_VERSIONE`) |
 | `generato` | int | secondi epoch UTC, `int(now.timestamp())` |
-| `finestra_giorni` | int | `p.feed_giorni` |
+| `finestra_giorni` | int | `p.dashboard_giorni` se impostato, altrimenti `p.feed_giorni` |
 | `troncato` | bool | vero se le offerte della finestra superano `dashboard_max_offerte` e l'elenco è stato tagliato alle più recenti |
 | `cartelle` | oggetto cartella (minuscola) -> lista ordinata di nomi di fonte | tutte le fonti di `config.fonti`, anche inattive, chiavi unite in minuscolo come `config.py:136-138`, chiavi ordinate |
 | `regole` | lista di oggetti | vuota se `dashboard_regole` è falso, altrimenti una voce per regola in ordine di config |
@@ -192,7 +192,7 @@ Senza questa estensione «Crea regola» non produce la regola equivalente per sc
 `config.py`:
 
 - `Rule` (righe 23-32) guadagna, tutti con default: `sconto_min: int | None = None`, `solo_coupon: bool = False`, `parole_src: tuple[str, ...] = ()`, `escludi_src: tuple[str, ...] = ()`, `canali_src: tuple[str, ...] = ()`. I `Rule(...)` dei test e di `cmd_filtra` restano validi.
-- `Params` (righe 35-48) guadagna `dashboard: bool = True`, `dashboard_regole: bool = True`, `dashboard_max_offerte: int = 10000`.
+- `Params` (righe 35-48) guadagna `dashboard: bool = True`, `dashboard_regole: bool = True`, `dashboard_max_offerte: int = 10000`, `dashboard_giorni: int | None = None` (finestra della pagina; assente segue `feed_giorni`, minore di 1 è `ConfigError`).
 - La chiamata `Params(...)` alle righe 103-116 è costruita campo per campo: i tre campi nuovi vanno passati uno a uno (`bool(raw.get("dashboard", True))`, `bool(raw.get("dashboard_regole", True))`, `int(raw.get("dashboard_max_offerte", 10000))`), altrimenti il valore dello YAML passa `_check_keys` (riga 99) e viene ignorato in silenzio. `dashboard_max_offerte < 1` è `ConfigError`.
 - Chiavi ammesse di una regola (riga 144): aggiungere `sconto_min` e `solo_coupon`.
 - Righe 146-148, errore se mancano tutti i criteri: `regola 'x': serve almeno una parola chiave o un altro criterio (prezzo_min, prezzo_max, sconto_min, solo_coupon, canali)`. I criteri sono parole, `prezzo_min`, `prezzo_max`, `sconto_min`, `solo_coupon`, `canali`; `escludi` da solo non è un criterio.
@@ -246,7 +246,7 @@ La pagina chiede `dashboard.json` con `fetch("dashboard.json", {cache: "no-cache
 
 Solo ECMAScript standard. Vietati nel file: `document`, `window`, `URLSearchParams`, `performance`, `navigator`, `localStorage`, `fetch`, `require`, `module`. Nessun lookbehind come literal regex: le espressioni con lookbehind o `\p{}` si costruiscono solo con `new RegExp(stringa, flag)` dentro `try/catch`, così un browser vecchio non rompe il parsing dello script. Si espone solo `globalThis.Filtri`, avvolto in una IIFE.
 
-Stato (`stato`): oggetto con campi `q` (lista di str), `no` (lista di str), `tutte` (bool), `pmin`, `pmax` (numero finito >= 0 o `null`), `smin` (intero 1-99 o `null`), `cart` (lista di str minuscole), `can` (lista di str), `per` (uno fra `1h 3h 6h 12h 24h 48h 3g 7g` o `null` per tutto il periodo), `cp` (bool), `ord` (uno dei sei ordinamenti, default `data-desc`).
+Stato (`stato`): oggetto con campi `q` (lista di str), `no` (lista di str), `tutte` (bool), `pmin`, `pmax` (numero finito >= 0 o `null`), `smin` (intero 1-99 o `null`), `cart` (lista di str minuscole), `can` (lista di str), `per` (`<numero>h` o `<numero>g`, oppure `null` per tutto il periodo), `cp` (bool), `ord` (uno dei sei ordinamenti, default `data-desc`).
 
 | funzione | firma | comportamento |
 |:--|:--|:--|
@@ -256,7 +256,7 @@ Stato (`stato`): oggetto con campi `q` (lista di str), `no` (lista di str), `tut
 | `traduciRegex(srcPython)` | `(str) -> {src, avvisi[], tradotta}` | vedi 3.4; non lancia mai |
 | `compilaVoce(voce)` | `(str) -> {ok, tipo, re, avvisi[]} \| {ok:false, errore}` | parola intera o regex, vedi 3.4 |
 | `compila(stato)` | `(stato) -> {ok, errori[], avvisi[], q[], no[]}` | compila ogni riga di `q` e `no`; `errori` e `avvisi` sono `{campo, riga, messaggio}` con riga da 1; `ok` è falso se c'è almeno un errore |
-| `periodoSecondi(per)` | `(str\|null) -> int\|null` | 1h 3600, 3h 10800, 6h 21600, 12h 43200, 24h 86400, 48h 172800, 3g 259200, 7g 604800 |
+| `periodoSecondi(per)` | `(str\|null) -> int\|null` | `<numero>h` per 3600, `<numero>g` per 86400, da 1 a 999; `null` se non combacia |
 | `insiemeCanali(stato, cartelle)` | `-> Set\|null` | unione dei canali delle cartelle in `cart` e dei nomi in `can`; `null` se entrambe vuote |
 | `applica(offerte, stato, opz)` | `opz = {cartelle, adesso, ora, budgetMs}` -> `{righe, senzaPrezzo, senzaSconto, troppoLento, compilato}` | `adesso` in secondi epoch, `ora()` in ms (default `Date.now`), `budgetMs` default 1500; `righe` già ordinate secondo `stato.ord` |
 | `ordina(righe, ord)` | `-> nuovo array` | vedi 3.5 |
@@ -333,7 +333,7 @@ Query string su `dashboard.html`, scritta con `history.replaceState(null, "", lo
 | `smin` | sconto minimo in percentuale, intero 1-99 | assente |
 | `cart` | cartelle in minuscolo, separate da virgola | assente |
 | `can` | canali separati da virgola; si uniscono alle cartelle | assente |
-| `per` | `1h 3h 6h 12h 24h 48h 3g 7g` | tutto il periodo |
+| `per` | `<numero>h` o `<numero>g` | tutto il periodo |
 | `cp` | `1` se solo con coupon | assente |
 | `ord` | `data-desc data-asc prezzo-asc prezzo-desc sconto-desc sconto-asc` | `data-desc` |
 
@@ -367,7 +367,7 @@ Pannello filtri, in ordine:
 8. Casella «Solo con coupon» (`#cp`).
 9. Pulsanti «Azzera filtri» (`#azzera`), «Copia link» (`#copia-link`), «Crea regola» (`#regola`).
 
-I conteggi per cartella e canale si calcolano una volta sola sul dataset intero. Le opzioni di `#per`: «Tutto il periodo», «Ultima ora», «Ultime 3 ore», «Ultime 6 ore», «Ultime 12 ore», «Ultime 24 ore», «Ultime 48 ore», «Ultimi 3 giorni», «Ultimi 7 giorni». Le opzioni di `#ord`: «Più recenti», «Meno recenti», «Prezzo crescente», «Prezzo decrescente», «Sconto maggiore», «Sconto minore».
+I conteggi per cartella e canale si calcolano una volta sola sul dataset intero. Le opzioni di `#per` si costruiscono a ogni caricamento dalla scala 1h, 3h, 6h, 12h, 24h, 48h, 3g, 7g, 14g, 30g, 60g, 90g, tenendo i gradini più stretti di `finestra_giorni`; la prima voce è «Tutto il periodo (N giorni)». Un `per` che arriva dall'URL e non è fra i gradini si aggiunge in coda, così il menu lo può mostrare. Le opzioni di `#ord`: «Più recenti», «Meno recenti», «Prezzo crescente», «Prezzo decrescente», «Sconto maggiore», «Sconto minore».
 
 Ogni campo di testo ha `autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"`: la punteggiatura intelligente di iOS trasformerebbe apici e trattini nelle regex. Font dei campi almeno 16 px (niente zoom di iOS al focus). Applicazione dei filtri: debounce di 200 ms su `#q`, `#no`, `#pmin`, `#pmax`, `#smin`; nessun debounce su menu, caselle e pulsanti.
 

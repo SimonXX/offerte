@@ -5,8 +5,9 @@
 
   var VERSIONE_CONTRATTO = 1;
   var ORDINI = ["data-desc", "data-asc", "prezzo-asc", "prezzo-desc", "sconto-desc", "sconto-asc"];
-  var PERIODI = {"1h": 3600, "3h": 10800, "6h": 21600, "12h": 43200, "24h": 86400, "48h": 172800,
-                 "3g": 259200, "7g": 604800};
+  // Un periodo è <numero>h oppure <numero>g: la scala del menu dipende dalla finestra dei dati,
+  // quindi non può stare in una tabella fissa.
+  var PERIODO_RE = /^([1-9][0-9]{0,2})(h|g)$/;
   var GRUPPI = ["q", "no", "tutte", "prezzo", "smin", "cart", "can", "per", "cp"];
   var RISERVATE_YAML = ["y", "n", "yes", "no", "on", "off", "true", "false", "null"];
 
@@ -212,7 +213,8 @@
   // --- selezione -----------------------------------------------------------
 
   function periodoSecondi(per) {
-    return per && haProprieta(PERIODI, per) ? PERIODI[per] : null;
+    var m = per ? PERIODO_RE.exec(String(per)) : null;
+    return m ? Number(m[1]) * (m[2] === "h" ? 3600 : 86400) : null;
   }
 
   function nomiCanali(cartelle) {
@@ -420,7 +422,7 @@
         aggiungiUnici(stato.can, valore.split(",").map(function (v) { return v.trim().toLowerCase(); })
           .filter(function (v) { return !noti || noti.has(v); }));
       } else if (chiave === "per") {
-        stato.per = haProprieta(PERIODI, valore) ? valore : null;
+        stato.per = periodoSecondi(valore) === null ? null : valore;
       } else if (chiave === "ord") {
         stato.ord = ORDINI.indexOf(valore) >= 0 ? valore : "data-desc";
       }
