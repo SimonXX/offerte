@@ -52,6 +52,8 @@ parametri:
   dashboard_regole: true          # espone parole e soglie delle regole nella dashboard (preset e "Crea regola")
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
   # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
+  dashboard_cartelle: [informatica, cina]   # cartelle gia' spuntate all'apertura: il grosso che interessa
+                                  # e' tech. "casa" e "raffica" restano raccolte, a una spunta di distanza
   # grafico_prezzi: ""            # vuoto = niente grafico dello storico prezzi nelle schede
   condividi_url: https://t.me/search_offerte_bot   # chat in cui arriva "mandamelo in chat";
                                   # t.me/share/url apre invece il selettore, "" toglie il pulsante
@@ -353,9 +355,13 @@ comunque, anche se non è fra i gradini.
 
 La finestra della dashboard è staccata da quella dei feed. `feed_giorni` governa RSS e JSON Feed e la valutazione
 delle regole a ogni giro; `dashboard_giorni`, se lo imposti, governa solo la pagina. Serve perché il database
-conserva `giorni_ritenzione` giorni (90 di default) mentre i feed ne mostrano 14: con `dashboard_giorni: 60` la
-pagina filtra su due mesi senza allargare i feed né far rivalutare le regole su due mesi di offerte a ogni giro.
-Il prezzo è la dimensione del file, che cresce in proporzione: circa 1 KB per offerta.
+conserva `giorni_ritenzione` giorni (90 di default, 21 nella config di questo repository) mentre i feed ne mostrano
+14: con `dashboard_giorni: 60` la pagina filtra su due mesi senza allargare i feed né far rivalutare le regole su due
+mesi di offerte a ogni giro. Il prezzo è la dimensione del file, che cresce in proporzione: circa 1 KB per offerta.
+
+`dashboard_cartelle` decide da quali cartelle parte la pagina appena si apre: senza di essa parte da tutto, che con
+una ventina di canali vuol dire molto rumore. Le altre cartelle restano raccolte e tornano con una spunta. Un link
+che porta già dei filtri (`?cart=...` o `?can=...`) ha sempre la precedenza su questo valore.
 
 `offerte feed` rigenera feed, OPML e `dashboard.json` dal database senza toccare la rete: serve per provare la pagina
 dopo aver cambiato una regola. Con `dashboard: false` nei parametri la pagina e i suoi file non si scrivono (e si
@@ -485,7 +491,7 @@ standard non costano nulla; lo stato SQLite vive su un branch orfano `data` con 
 2. Settings, Pages, Source: `GitHub Actions`.
 3. Settings, Secrets and variables, Actions: `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` se vuoi le notifiche,
    `APIFY_TOKEN` se usi fonti Apify. Senza segreti il workflow gira lo stesso.
-4. Actions, workflow `offerte`, `Run workflow` per il primo giro; poi il cron fa da solo.
+4. Actions, workflow `offerte`, `Run workflow` per il primo giro; poi il giro si richiama da solo.
 5. I feed sono su `https://<utente>.github.io/<repo>/`, ad esempio
    `https://<utente>.github.io/<repo>/cartella/casa.xml`: in Inoreader, Add subscription, incolla l'URL.
 
@@ -495,9 +501,22 @@ registrano solo dal predefinito. Se ti capita, si corregge con
 `gh api --method PATCH repos/<utente>/<repo> -f default_branch=main`.
 
 `feed_base_url` viene impostata dal workflow tramite la variabile `OFFERTE_FEED_BASE_URL`, che ha la precedenza sulla
-config. Il cron di GitHub parte al minimo ogni 5 minuti e può slittare di qualche minuto nei momenti di carico; dopo
-60 giorni senza attività GitHub spegne i cron, e il workflow si riabilita da solo a ogni giro per evitarlo. Per
-provare in locale il salvataggio dello stato: `OFFERTE_DATA_REMOTE=/percorso/repo.git ./deploy/stato.sh save`.
+config. Per provare in locale il salvataggio dello stato:
+`OFFERTE_DATA_REMOTE=/percorso/repo.git ./deploy/stato.sh save`.
+
+### Ogni quanto gira
+
+La pianificazione `schedule` di GitHub è una coda, non una garanzia: il minimo dichiarato è 5 minuti, lo slittamento
+nei momenti di carico è normale e su un repository nuovo può non partire affatto per ore. Qui non è mai partita, così
+il motore è diventato un altro: l'ultimo passo del workflow (`deploy/autoavvio.sh`) chiede il giro successivo appena
+finisce il proprio. La cadenza diventa la durata di un giro, circa quattro minuti, e il cron resta solo come rete di
+sicurezza nel caso il ciclo si interrompa.
+
+Il `GITHUB_TOKEN` del workflow non può innescare altri workflow: GitHub lo impedisce per evitare i cicli infiniti.
+Serve quindi un token personale nel secret `AUTOAVVIO_TOKEN`, a grana fine, limitato a questo repository e al solo
+permesso `Actions: read and write`. Senza quel secret lo script non fa niente e si resta al cron: **cancellare il
+secret è il modo di fermare il ciclo**. Due giri non si sovrappongono mai, per due motivi indipendenti: il gruppo
+`concurrency` li mette in fila e lo script non chiede un giro nuovo se ne vede già uno vivo.
 
 ## Container
 

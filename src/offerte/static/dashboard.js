@@ -232,6 +232,12 @@
     calcolaConteggi();
     if (primoCaricamento) {
       stato = F.leggiUrl(location.search, cartelle);
+      // Senza filtri nel link si parte dalle cartelle predefinite in config, non da tutto.
+      if (!stato.cart.length && !stato.can.length) {
+        (dati.predefinite || []).forEach(function (c) {
+          if (cartelle[c] && stato.cart.indexOf(c) === -1) { stato.cart.push(c); }
+        });
+      }
       costruisciCaselle();
       primoCaricamento = false;
     }

@@ -188,3 +188,41 @@ def test_file_protocol(tmp_path):
     prepara(tmp_path, quante=5)
     pagina = tmp_path / "var" / "feeds" / "dashboard.html"
     assert attributi(dom(pagina.as_uri())).get("data-stato") == "errore-file"
+
+
+@pytest.fixture(scope="module")
+def servito_predefinite():
+    """La stessa pagina, con config che parte dalla sola cartella informatica."""
+    with tempfile.TemporaryDirectory(prefix="offerte-pred-") as cartella:
+        base = Path(cartella)
+        config = load_config(scrivi_config(base, dashboard_cartelle=["informatica"]))
+        db = config.parametri.var_dir / "offerte.sqlite"
+        db.parent.mkdir(parents=True, exist_ok=True)
+        with crea_db(db, n=300, now=NOW) as store:
+            apply_rules(store, config.regole, since=(NOW - timedelta(days=14)).isoformat(timespec="seconds"),
+                        now=NOW.isoformat(timespec="seconds"))
+            write_feeds(store, config, datetime.now(timezone.utc))
+        feeds = config.parametri.var_dir / "feeds"
+        documento = json.loads((feeds / "dashboard.json").read_text(encoding="utf-8"))
+        servitore = Servitore(feeds)
+        try:
+            yield servitore, documento, dashboard_cartelle(config)
+        finally:
+            servitore.chiudi()
+
+
+def test_cartelle_predefinite_senza_link(servito_predefinite):
+    """Senza nulla nell'URL la pagina parte dalle cartelle di config; un link esplicito le scavalca."""
+    servitore, documento, cartelle = servito_predefinite
+    assert documento["predefinite"] == ["informatica"]
+    offerte = documento["offerte"]
+
+    a = attributi(dom(f"{servitore.base}/dashboard.html"))
+    assert a.get("data-stato") == "pronto"
+    ids = seleziona(offerte, {"cart": ["informatica"]}, cartelle)
+    assert a.get("data-n") == str(len(ids))
+    assert a.get("data-primi") == ",".join(str(i) for i in ids[:20])
+
+    a = attributi(dom(f"{servitore.base}/dashboard.html?cart=casa"))
+    ids = seleziona(offerte, {"cart": ["casa"]}, cartelle)
+    assert a.get("data-n") == str(len(ids))

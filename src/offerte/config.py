@@ -62,6 +62,9 @@ class Params:
     dashboard_regole: bool = True
     dashboard_max_offerte: int = 10000
     dashboard_giorni: int | None = None  # finestra della dashboard; assente = quella dei feed
+    # Cartelle gia' spuntate all'apertura della dashboard: serve a non partire da tutto.
+    # Vuoto = nessun filtro iniziale. Un link con ?cart=... o ?can=... ha sempre la precedenza.
+    dashboard_cartelle: tuple[str, ...] = ()
     # Grafico dello storico prezzi, caricato dal browser solo quando apri la scheda. Vuoto = niente grafico.
     grafico_prezzi: str = "https://graph.keepa.com/pricehistory.png?domain=it&range=365&asin="
     # Base del link "mandamelo in chat". Con t.me/share/url apre il selettore delle chat; con
@@ -141,6 +144,7 @@ def load_config(path: Path | str) -> Config:
         dashboard_regole=bool(raw.get("dashboard_regole", True)),
         dashboard_max_offerte=int(raw.get("dashboard_max_offerte", 10000)),
         dashboard_giorni=None if raw.get("dashboard_giorni") is None else int(raw["dashboard_giorni"]),
+        dashboard_cartelle=tuple(str(c).strip().lower() for c in (raw.get("dashboard_cartelle") or []) if str(c).strip()),
         grafico_prezzi=str(raw.get("grafico_prezzi", Params.grafico_prezzi)).strip(),
         condividi_url=str(raw.get("condividi_url", Params.condividi_url)).strip(),
     )
@@ -227,4 +231,8 @@ def load_config(path: Path | str) -> Config:
     if len({r.nome for r in regole}) != len(regole):
         raise ConfigError("regole con lo stesso nome")
 
-    return Config(path=path, fonti=tuple(fonti), regole=tuple(regole), parametri=params)
+    cfg = Config(path=path, fonti=tuple(fonti), regole=tuple(regole), parametri=params)
+    ignote = [c for c in params.dashboard_cartelle if c not in cfg.cartelle()]
+    if ignote:
+        raise ConfigError(f"parametri: dashboard_cartelle, cartelle inesistenti: {', '.join(ignote)}")
+    return cfg

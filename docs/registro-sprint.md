@@ -812,3 +812,55 @@ storico resterebbero invisibili. In compenso sovrascrivere il branch `data` canc
 `notifications` scritte da Actions, con il rischio di rinotificare le offerte delle ultime 24 ore. Se un domani
 servisse davvero, il travaso va fatto riportando prima quelle righe nel database locale abbinandole per `key`,
 perché gli id delle offerte nei due database sono indipendenti.
+
+## Nota: il cron di GitHub non è mai partito, il giro si richiama da solo
+
+Il repository è nato alle 12:31 UTC del 29 ottobre. Alle 16:52, dopo quattro ore e mezza, l'elenco delle
+esecuzioni conteneva solo eventi `push` e `workflow_dispatch`: **nessun evento `schedule`**, con il cron spostato
+due volte (da `*/15` a `3,18,33,48` a ogni cinque minuti) per escludere la congestione dei minuti tondi.
+
+Escluse una per una tutte le cause che dipendono dal repository: pubblico, non un fork, non archiviato, non
+disabilitato, Actions abilitate con `allowed_actions: all`, workflow `active`, blocco `schedule` presente nel file
+sul branch predefinito, predefinito riportato a `main` alle 12:45. Non restava una configurazione da correggere.
+
+Il cron è stato quindi tolto dal percorso critico. L'ultimo passo del workflow esegue `deploy/autoavvio.sh`, che
+chiede il giro successivo appena il proprio è finito; la cadenza diventa la durata di un giro, circa quattro
+minuti, meglio dei cinque minuti che il cron concede al massimo. Lo `schedule` resta come rete di sicurezza.
+
+Tre vincoli hanno guidato lo script. Il `GITHUB_TOKEN` del workflow, per costruzione, non innesca altri workflow:
+serve un token personale nel secret `AUTOAVVIO_TOKEN` (a grana fine, solo questo repository, solo
+`Actions: read and write`). Un ciclo va potuto fermare: senza quel secret lo script esce subito, quindi cancellarlo
+è il freno. Un ciclo non deve sdoppiarsi: oltre al gruppo `concurrency` che mette i giri in fila, lo script conta i
+run non ancora completati diversi dal proprio e non chiede niente se ne trova. Il passo che riabilitava il workflow
+contro lo spegnimento dopo 60 giorni è stato tolto: era inutile con un ciclo continuo e rendeva ambiguo il freno,
+perché resuscitava un workflow disattivato a mano.
+
+## Deviazione: la dashboard parte dalle cartelle tech
+
+Richiesta in corso d'uso: «a me principalmente le cose tech interessano, non è che tutto». La pagina apriva su
+tutte e quattro le cartelle, e con ventitré canali il rumore di `casa` e `raffica` copriva il resto.
+
+Scartato il rimedio per link (un segnalibro con `?cart=informatica,cina`): è la stessa categoria di soluzione
+manuale già rifiutata per la ricerca a parola intera. Aggiunto invece il parametro `dashboard_cartelle`, che
+viaggia nel documento come campo `predefinite` e che `dashboard.js` applica solo quando l'indirizzo non porta già
+`cart` o `can`. Il motore `filtri.js` non è stato toccato: la parità con `rules.matches` è l'invariante del
+progetto e non doveva entrare in gioco per una preferenza di apertura. Nomi di cartelle inesistenti fermano il
+caricamento della config invece di produrre una pagina vuota senza spiegazione.
+
+## Nota: Zalando e Privé non sono raggiungibili con questa architettura
+
+Richiesta: «vedi se vuoi integrare le offerte zalando e zalando prive». Tre strade provate, tutte misurate.
+
+I canali Telegram già configurati non coprono Zalando: zero occorrenze su 3.104 offerte in archivio, e la ricerca
+`?q=zalando` sui canali ad alto volume non restituisce nulla. Sono canali di affiliazione Amazon e AliExpress.
+Dei dodici handle plausibili sondati (`zalandoofferte`, `offertezalando`, `zalandoprive`, e così via) uno solo ha
+un'anteprima pubblica attiva, `offerte_moda`, che però di Zalando non parla.
+
+Lo scraping diretto è escluso: `https://www.zalando.it/sconti-uomo/` risponde **403** anche con intestazioni da
+browser, e da un indirizzo di datacenter GitHub andrebbe peggio. Privé è a iscrizione e richiederebbe le
+credenziali dell'utente dentro un secret, cosa che contrasta con il vincolo «basta che non ho rischi».
+
+La sola strada pulita è l'affiliazione: «Privé by Zalando IT» è un programma Awin (merchant 9485). Da publisher
+Awin approvato si accede al feed prodotti, che diventa una fonte `rss` o `comando` senza toccare il resto del
+codice. Richiede una registrazione e un deposito rimborsabile, quindi è una decisione dell'utente, non una cosa
+da fare di iniziativa.

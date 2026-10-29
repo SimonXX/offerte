@@ -217,7 +217,7 @@ def dashboard_offerta(o: Offer) -> dict:
 
 def dashboard_bytes(offers: list[Offer], cartelle: dict[str, list[str]], regole: list[dict], fonti: list[dict],
                     now: datetime, giorni: int, max_offerte: int = 10000, grafico: str = "",
-                    condividi: str = "") -> bytes:
+                    condividi: str = "", predefinite: tuple[str, ...] = ()) -> bytes:
     """Il documento `dashboard.json`. Pura: niente disco, niente store, così si prova a mano."""
     ordinate = sorted(offers, key=lambda o: (_epoch(o.posted_at) or 0, o.id), reverse=True)
     doc = {
@@ -234,6 +234,9 @@ def dashboard_bytes(offers: list[Offer], cartelle: dict[str, list[str]], regole:
         doc["grafico"] = grafico
     if condividi:
         doc["condividi"] = condividi
+    note = [c for c in predefinite if c in cartelle]
+    if note:
+        doc["predefinite"] = note  # cartelle spuntate all'apertura, se il link non dice altro
     return json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
@@ -259,7 +262,7 @@ def write_dashboard(store: Store, config: Config, now: datetime) -> int:
     dati = dashboard_bytes(
         offers, dashboard_cartelle(config), dashboard_regole(config) if p.dashboard_regole else [],
         dashboard_fonti(config, store), now, giorni, p.dashboard_max_offerte, p.grafico_prezzi,
-        p.condividi_url)
+        p.condividi_url, p.dashboard_cartelle)
     for nome in DASHBOARD_ASSET:
         _copia_se_diverso(STATIC / nome, base / nome)
     _atomic_write(base / "dashboard.json", dati)  # per ultimo: la pagina non deve mai leggere dati più vecchi di sé

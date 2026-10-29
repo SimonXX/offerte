@@ -352,3 +352,30 @@ def test_condividi_nella_testa(tmp_path):
     with Store(":memory:") as store:
         doc, _ = doc_da([offerta()], config, store, condividi="")
     assert "condividi" not in doc
+
+
+def test_cartelle_predefinite_nella_testa(tmp_path):
+    """Le cartelle di partenza viaggiano nel documento: la pagina non ne sa niente da sola."""
+    config = config_demo(tmp_path)
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store, predefinite=("informatica",))
+    assert doc["predefinite"] == ["informatica"]
+    with Store(":memory:") as store:  # una cartella che non esiste non finisce nel documento
+        doc, _ = doc_da([offerta()], config, store, predefinite=("informatica", "inventata"))
+    assert doc["predefinite"] == ["informatica"]
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store)
+    assert "predefinite" not in doc
+
+
+def test_cartelle_predefinite_inesistenti_bloccate(tmp_path):
+    """Un refuso nel nome si vede al caricamento, non con una dashboard vuota e nessuna spiegazione."""
+    buona = tmp_path / "buona.yaml"
+    buona.write_text("parametri: {dashboard_cartelle: [Informatica]}\n"
+                     "canali: [{nome: a, cartella: informatica}]\nregole: []\n", encoding="utf-8")
+    assert load_config(buona).parametri.dashboard_cartelle == ("informatica",)
+    cattiva = tmp_path / "cattiva.yaml"
+    cattiva.write_text("parametri: {dashboard_cartelle: [informatica, casa]}\n"
+                       "canali: [{nome: a, cartella: informatica}]\nregole: []\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="casa"):
+        load_config(cattiva)

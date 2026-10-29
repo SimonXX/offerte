@@ -1,11 +1,12 @@
-# Raccolta ogni 5 minuti su GitHub Actions (il minimo che la pianificazione consente) e feed pubblicati su GitHub Pages. Costo zero su repository pubblico.
+# Raccolta continua su GitHub Actions e feed pubblicati su GitHub Pages. Costo zero su repository pubblico.
+# Il giro si riavvia da solo (deploy/autoavvio.sh): la pianificazione cron di GitHub, qui, non e' mai partita.
 # Stato (SQLite) su un branch orfano "data" riscritto a ogni giro, così il repository non cresce.
 name: offerte
 
 on:
   schedule:
-    # Minuti sfalsati di proposito: GitHub accoda le esecuzioni pianificate e sui runner gratuiti
-    # scarta per prime quelle sui minuti tondi (:00, :15, :30, :45), i piu' congestionati.
+    # Rete di sicurezza, non il motore: se il ciclo di autoavvio si spegne, questa lo riaccende.
+    # Minuti sfalsati dai tondi (:00, :15, :30, :45), i piu' congestionati sui runner gratuiti.
     - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
   push:
@@ -50,13 +51,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./deploy/stato.sh save
-      - name: Tieni acceso il cron (GitHub lo spegne dopo 60 giorni senza attività)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/offerte.yml/enable" || true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: var/feeds
+      - name: Chiedi il giro successivo
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.AUTOAVVIO_TOKEN }}
+        run: ./deploy/autoavvio.sh
 
   pubblicazione:
     needs: raccolta
