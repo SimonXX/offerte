@@ -43,3 +43,16 @@ def test_short_link():
     assert is_short_link("https://sconti.example/x7Yz9")
     assert not is_short_link("https://www.amazon.it/dp/B08GLX7TNT")
     assert not is_short_link("https://www.mediaworld.it/it/product/_x-123.html")
+
+
+def test_entita_senza_punto_e_virgola_non_si_decodificano():
+    u = "https://shop.example.com/p?id=1&currency=EUR&section=a&region=it&notify=1"
+    assert clean_url(u) == u
+    # le entità vere, anche doppie come nei post reali, si decodificano lo stesso
+    assert clean_url("https://shop.example.com/p?a=1&amp;amp;b=2") == "https://shop.example.com/p?a=1&b=2"
+
+
+def test_schemi_non_web_scartati():
+    assert pick_offer_link(["tel:+390212345", "mailto:info@shop.it", "https://shop.example.com/p"]) == "https://shop.example.com/p"
+    assert pick_offer_link(["tel:+390212345"]) is None
+    assert pick_offer_link(["https://example.com:abc/x"]) is None  # porta non numerica

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import logging
+import math
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, ClassVar
+from urllib.parse import urlsplit
 
 from ..config import ConfigError
 from ..dedupe import text_key
@@ -21,6 +24,7 @@ from ..store import SourceState, Store
 class FetchResult:
     items: list[Message]
     last_id: int | None = None  # solo per fonti con id numerici crescenti (Telegram)
+    vuota: bool = False  # la fonte ha risposto ma non ha prodotto nulla: probabile layout cambiato
 
 
 @dataclass
@@ -64,17 +68,45 @@ class Source:
         return f"<fonte {self.nome} tipo={self.tipo} cartella={self.cartella}>"
 
 
+# Formati italiani che non sono né RFC 2822 né ISO: compaiono nei record di `comando` e `apify`.
+FORMATI_DATA = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y", "%d-%m-%Y %H:%M", "%d-%m-%Y")
+MIGLIAIA_RE = re.compile(r"\d{1,3}(?:\.\d{3})+")
+
+
+def url_con_schema(fonte: Source, url: str) -> str:
+    """Un url senza schema arriverebbe fino a httpx come UnsupportedProtocol: meglio dirlo al caricamento."""
+    if urlsplit(url).scheme not in ("http", "https"):
+        raise ConfigError(f"fonte '{fonte.nome}' ({fonte.tipo}): 'url' senza schema http o https: '{url}'")
+    return url
+
+
 def parse_date(value: Any) -> datetime | None:
-    """RFC 2822, ISO 8601 (anche con Z) o timestamp Unix; sempre con fuso, UTC se assente."""
-    if value is None or value == "":
+    """RFC 2822, ISO 8601 (anche con Z), formato italiano o timestamp Unix; sempre con fuso, UTC se assente.
+
+    Non solleva mai: un record con una data assurda non deve abbattere l'intera fonte.
+    """
+    if value is None or value == "" or isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(float(value) / (1000 if value > 1e11 else 1), tz=timezone.utc)
     s = str(value).strip()
+    if isinstance(value, (int, float)) or s.lstrip("-").isdigit():
+        try:
+            n = float(value)
+            return datetime.fromtimestamp(n / (1000 if abs(n) > 1e11 else 1), tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
     dt = None
     try:
         dt = parsedate_to_datetime(s)
     except (TypeError, ValueError, IndexError):
+        dt = None
+    if dt is None:
+        for formato in FORMATI_DATA:
+            try:
+                dt = datetime.strptime(s, formato)
+                break
+            except ValueError:
+                continue
+    if dt is None:
         try:
             dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
         except ValueError:
@@ -82,19 +114,28 @@ def parse_date(value: Any) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _finito(x: float) -> float | None:
+    """nan e inf non sono prezzi: passerebbero ogni filtro prezzo_max e sporcherebbero i feed."""
+    return x if math.isfinite(x) else None
+
+
 def to_number(value: Any) -> float | None:
-    """19.99, '19,99 €', '€ 1.299' -> float; None se non c'è un numero."""
-    if value is None or value == "":
+    """19.99, '19,99 €', '€ 1.299' -> float; None se non c'è un numero utilizzabile."""
+    if value is None or value == "" or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return float(value)
-    s = str(value)
+        return _finito(float(value))
+    s = str(value).strip()
     prezzi = find_prices(s)
     if prezzi:
-        return prezzi[0][0]
+        return _finito(prezzi[0][0])
+    if "_" in s:
+        return None  # float("1_000") è una comodità di Python, non un formato che scrivono le fonti
+    if MIGLIAIA_RE.fullmatch(s):
+        return float(s.replace(".", ""))  # "1.299" senza decimali: punto di migliaia, non decimale
     try:
-        return float(s.replace(".", "").replace(",", ".")) if "," in s else float(s)
-    except ValueError:
+        return _finito(float(s.replace(".", "").replace(",", ".")) if "," in s else float(s))
+    except (TypeError, ValueError):
         return None
 
 

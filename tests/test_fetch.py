@@ -1,7 +1,8 @@
 """Giro completo su trasporto finto: canale ok con storico, canale senza anteprima, canale che fallisce."""
 
 import json
-from datetime import datetime, timezone
+import sys
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl
 
 import httpx
@@ -106,3 +107,105 @@ def test_giro_completo(ambiente):
         s2 = run_fetch(config, store, client, notifier, now=NOW)
         assert s2.new_posts == 0 and s2.notified == 0 and len(inviate) == 1
         assert s2.ok == ["canale_test"]
+
+
+def telegram_finto(risposte):
+    """Trasporto che risponde solo all'API di Telegram, consumando `risposte` una alla volta."""
+    inviate = []
+
+    def handler(request):
+        inviate.append(dict(parse_qsl(request.read().decode())))
+        return risposte.pop(0)
+
+    return httpx.MockTransport(handler), inviate
+
+
+def config_finta(tmp_path, **extra):
+    cfg = {
+        "parametri": {"intervallo_cortesia": 0, "var_dir": str(tmp_path / "var")},
+        "fonti": [{"nome": "finta", "tipo": "fonte_finta:FonteFinta", "cartella": "casa", "n": 1}],
+        "regole": [{"nome": "finto", "parole": ["prodotto"], "notify": True}],
+        **extra,
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    return load_config(tmp_path / "config.yaml")
+
+
+def test_notifica_fallita_si_ritenta_al_giro_dopo(tmp_path):
+    config = config_finta(tmp_path)
+    rifiuto = {"ok": False, "description": "Too Many Requests", "parameters": {"retry_after": 2}}
+    transport, inviate = telegram_finto([httpx.Response(429, json=rifiuto), httpx.Response(429, json=rifiuto),
+                                         httpx.Response(200, json={"ok": True})])
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=httpx.MockTransport(lambda r: httpx.Response(404)), sleep=lambda s: None)
+        notifier = Notifier("token", "42", transport=transport, sleep=lambda s: None)
+        primo = run_fetch(config, store, client, notifier, now=NOW)
+        assert primo.notified == 0 and len(inviate) == 2  # 429 e una sola riprova nello stesso giro
+        secondo = run_fetch(config, store, client, notifier, now=NOW + timedelta(minutes=10))
+        assert secondo.notified == 1 and len(inviate) == 3
+        terzo = run_fetch(config, store, client, notifier, now=NOW + timedelta(minutes=20))
+        assert terzo.notified == 0 and len(inviate) == 3  # notificata una volta sola
+
+
+def test_notifica_riprova_una_volta_su_429(tmp_path):
+    config = config_finta(tmp_path)
+    rifiuto = {"ok": False, "description": "Too Many Requests", "parameters": {"retry_after": 1}}
+    transport, inviate = telegram_finto([httpx.Response(429, json=rifiuto), httpx.Response(200, json={"ok": True})])
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=httpx.MockTransport(lambda r: httpx.Response(404)), sleep=lambda s: None)
+        notifier = Notifier("token", "42", transport=transport, sleep=lambda s: None)
+        s = run_fetch(config, store, client, notifier, now=NOW)
+    assert s.notified == 1 and len(inviate) == 2
+
+
+def test_regola_senza_notify_non_mette_in_coda(tmp_path):
+    config = config_finta(tmp_path, regole=[{"nome": "finto", "parole": ["prodotto"], "notify": False}])
+    transport, inviate = telegram_finto([])
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=httpx.MockTransport(lambda r: httpx.Response(404)), sleep=lambda s: None)
+        s = run_fetch(config, store, client, Notifier("token", "42", transport=transport, sleep=lambda s: None), now=NOW)
+    assert s.notified == 0 and inviate == []
+
+
+SCRIPT_SENZA_DATA = (
+    "import json\n"
+    "for i in range(3):\n"
+    "    print(json.dumps({'id': f'x{i}', 'titolo': f'Prodotto {i}', 'testo': 'descrizione', 'prezzo': '19,99 €'}))\n"
+)
+
+
+def test_data_di_ripiego_al_primo_giro_non_notifica(tmp_path):
+    (tmp_path / "scraper.py").write_text(SCRIPT_SENZA_DATA, encoding="utf-8")
+    cfg = {
+        "parametri": {"intervallo_cortesia": 0, "var_dir": str(tmp_path / "var")},
+        "fonti": [{"nome": "senzadata", "tipo": "comando", "cartella": "casa",
+                   "comando": [sys.executable, str(tmp_path / "scraper.py")]}],
+        "regole": [{"nome": "tutto", "parole": ["prodotto"], "notify": True}],
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    config = load_config(tmp_path / "config.yaml")
+    transport, inviate = telegram_finto([])
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=httpx.MockTransport(lambda r: httpx.Response(404)), sleep=lambda s: None)
+        notifier = Notifier("token", "42", transport=transport, sleep=lambda s: None)
+        primo = run_fetch(config, store, client, notifier, now=NOW)
+        secondo = run_fetch(config, store, client, notifier, now=NOW + timedelta(minutes=10))
+    assert len(primo.new_offers) == 3 and primo.notified == 0
+    assert secondo.notified == 0 and inviate == []
+
+
+def test_fonte_html_vuota_resta_fra_le_ok(tmp_path):
+    cfg = {
+        "parametri": {"intervallo_cortesia": 0, "var_dir": str(tmp_path / "var")},
+        "fonti": [{"nome": "pagina", "tipo": "html", "cartella": "casa",
+                   "url": "https://shop.example.com/offerte", "elemento": "div.deal"}],
+        "regole": [{"nome": "r", "parole": ["ssd"]}],
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    config = load_config(tmp_path / "config.yaml")
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, text="<html><body><p>layout cambiato</p></body></html>"))
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=transport, sleep=lambda s: None)
+        s = run_fetch(config, store, client, None, now=NOW)
+        assert s.ok == ["pagina"] and not s.failed
+        assert store.channel_state("pagina").last_status == "vuota"

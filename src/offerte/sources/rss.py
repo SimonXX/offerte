@@ -9,10 +9,12 @@ from ..dedupe import text_key
 from ..http import FetchError
 from ..parser import Message, fragment
 from . import registra
-from .base import FetchContext, FetchResult, Source, parse_date
+from .base import FetchContext, FetchResult, Source, parse_date, url_con_schema
 
+RSS10 = "http://purl.org/rss/1.0/"
 NS = {
     "atom": "http://www.w3.org/2005/Atom",
+    "rss10": RSS10,
     "media": "http://search.yahoo.com/mrss/",
     "content": "http://purl.org/rss/1.0/modules/content/",
     "dc": "http://purl.org/dc/elements/1.1/",
@@ -24,8 +26,9 @@ def _text(el: ET.Element | None) -> str:
 
 
 def _rss_items(root: ET.Element) -> list[dict]:
+    """RSS 2.0 e RSS 1.0: in RDF gli elementi stanno nel namespace http://purl.org/rss/1.0/."""
     out = []
-    for item in root.iter("item"):
+    for item in [*root.iter("item"), *root.iter(f"{{{RSS10}}}item")]:
         enclosure = item.find("enclosure")
         media = item.find("media:content", NS) if item.find("media:content", NS) is not None else item.find("media:thumbnail", NS)
         image = None
@@ -33,9 +36,13 @@ def _rss_items(root: ET.Element) -> list[dict]:
             image = enclosure.get("url")
         elif media is not None:
             image = media.get("url")
+        def campo(nome: str) -> str:
+            return _text(item.find(nome)) or _text(item.find(f"rss10:{nome}", NS))
+
         out.append({
-            "title": _text(item.find("title")), "link": _text(item.find("link")),
-            "id": _text(item.find("guid")), "html": _text(item.find("content:encoded", NS)) or _text(item.find("description")),
+            "title": campo("title"), "link": campo("link"),
+            "id": _text(item.find("guid")) or item.get(f"{{http://www.w3.org/1999/02/22-rdf-syntax-ns#}}about", ""),
+            "html": _text(item.find("content:encoded", NS)) or campo("description"),
             "date": _text(item.find("pubDate")) or _text(item.find("dc:date", NS)), "image": image,
         })
     return out
@@ -63,7 +70,10 @@ def parse_feed(data: bytes, source: str, now: datetime, limit: int = 50) -> list
         root = ET.fromstring(data)
     except ET.ParseError as e:
         raise FetchError(f"feed non valido: {e}") from None
-    raw = _atom_entries(root) if root.tag.endswith("feed") else _rss_items(root)
+    tag = root.tag.rsplit("}", 1)[-1].lower()
+    if tag not in {"rss", "feed", "rdf"}:
+        raise FetchError(f"non è un feed: radice <{tag}>")
+    raw = _atom_entries(root) if tag == "feed" else _rss_items(root)
     messages: list[Message] = []
     for r in raw[:limit]:
         text, links, struck, image = fragment(r["html"])
@@ -86,7 +96,7 @@ class RssSource(Source):
     chiavi = frozenset({"url", "massimo"})
 
     def configura(self) -> None:
-        self.url = str(self.opzione("url", obbligatoria=True))
+        self.url = url_con_schema(self, str(self.opzione("url", obbligatoria=True)))
 
     def fetch(self, ctx: FetchContext) -> FetchResult:
         resp = ctx.client.get(self.url)

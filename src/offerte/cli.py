@@ -12,11 +12,13 @@ from pathlib import Path
 
 from . import __version__
 from .config import Config, ConfigError, Rule, compile_keyword, load_config
+from .extract import extract
 from .feeds import fmt_price
 from .fetch import run_fetch
 from .http import Client
 from .log import setup_logging
 from .notify import Notifier, load_env
+from .links import pick_offer_link
 from .rules import matches
 from .serve import serve
 from .sources.base import FetchContext
@@ -183,10 +185,15 @@ def cmd_prova(args: argparse.Namespace, config: Config) -> int:
         except Exception as e:  # noqa: BLE001 (è un comando diagnostico: l'errore è il risultato)
             print(f"errore: {type(e).__name__}: {e}", file=sys.stderr)
             return 1
-    print(f"{len(result.items)} elementi" + (f", id massimo {result.last_id}" if result.last_id else ""))
+    vuota = ", nessun elemento trovato dal selettore" if result.vuota else ""
+    print(f"{len(result.items)} elementi" + (f", id massimo {result.last_id}" if result.last_id else "") + vuota)
     for m in result.items[: args.limite]:
-        prezzo = f"{m.price}" if m.price is not None else "-"
-        print(f"- {m.date:%Y-%m-%d %H:%M}  id={m.id}  prezzo={prezzo}  {m.text.splitlines()[0][:70]}  {m.links[0] if m.links else ''}")
+        # Stessa estrazione di process_message: altrimenti il comando mostrerebbe il prezzo grezzo della
+        # fonte (vuoto per Telegram) e il primo link qualsiasi, che spesso è la foto dell'anteprima.
+        ex = extract(m.text, m.struck)
+        prezzo = fmt_price(m.price if m.price is not None else ex.price) if (m.price is not None or ex.price is not None) else "-"
+        titolo = ex.title or m.text.splitlines()[0][:70]
+        print(f"- {m.date:%Y-%m-%d %H:%M}  id={m.id}  prezzo={prezzo:>10}  {titolo[:70]}  {pick_offer_link(m.links) or ''}")
     return 0
 
 
@@ -219,14 +226,15 @@ COMMANDS = {"fetch": cmd_fetch, "serve": cmd_serve, "search": cmd_search, "stats
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    config_path = args.config or Path(os.environ.get("OFFERTE_CONFIG") or "config.yaml")
+    config_path = Path(args.config or os.environ.get("OFFERTE_CONFIG") or "config.yaml")
+    # Prima della config: cosi' le variabili scritte in .env (OFFERTE_FEED_BASE_URL fra le altre) hanno effetto.
+    load_env(config_path.parent / ".env")
     try:
         config = load_config(config_path)
     except ConfigError as e:
         print(f"errore di configurazione: {e}", file=sys.stderr)
         return 2
     setup_logging(config.parametri.var_dir, args.verbose)
-    load_env(config.path.parent / ".env")
     try:
         return COMMANDS[args.cmd](args, config)
     except KeyboardInterrupt:

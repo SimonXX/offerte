@@ -200,3 +200,75 @@ def test_giro_con_fonti_miste(tmp_path):
         s2 = run_fetch(config, store, client, None, now=NOW + timedelta(minutes=5))
         assert s2.ok == ["feed"] and FonteFinta.chiamate == 1  # ogni: 60 → la fonte finta salta il secondo giro
         assert s2.new_posts == 0
+
+
+PAGINA_ANCORE = """<html><body>
+<div class="deal"><h3>Robot aspirapolvere</h3><span>199 €</span><a href="#">wishlist</a></div>
+<div class="deal"><h3>Friggitrice ad aria</h3><span>79 €</span><a href="#">wishlist</a></div>
+</body></html>"""
+
+
+def test_html_ancore_inutili_non_collassano_gli_id():
+    fonte = HtmlSource("pagina", "casa", {"url": "https://shop.example.com/offerte", "elemento": "div.deal",
+                                          "campi": {"titolo": "h3"}})
+    a, b = fonte.parse(PAGINA_ANCORE, NOW)
+    assert a.id != b.id and a.id.startswith("text:") and b.id.startswith("text:")
+    assert a.links == [] and a.permalink == "https://shop.example.com/offerte"
+
+
+def test_html_selettore_a_vuoto_segnala_la_fonte(tmp_path):
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, text="<html><body><p>niente</p></body></html>"))
+    fonte = HtmlSource("pagina", "casa", {"url": "https://shop.example.com/offerte", "elemento": "div.deal"})
+    result = fonte.fetch(ctx(tmp_path, transport))
+    assert result.vuota and result.items == []
+
+
+RSS10 = b"""<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+         xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel rdf:about="https://e.com/"><title>Negozio</title><link>https://e.com/</link></channel>
+<item rdf:about="https://e.com/p/1"><title>SSD Crucial 1TB</title><link>https://e.com/p/1</link>
+<description>Prezzo 59,99 euro</description><dc:date>2026-10-27T08:00:00Z</dc:date></item>
+</rdf:RDF>"""
+
+
+def test_rss_1_0():
+    (m,) = parse_feed(RSS10, "feed", NOW)
+    assert (m.id, m.permalink) == ("https://e.com/p/1", "https://e.com/p/1")
+    assert m.text.startswith("SSD Crucial 1TB") and m.date.isoformat() == "2026-10-27T08:00:00+00:00"
+
+
+@pytest.mark.parametrize("dati", [b"<html><body>ciao</body></html>", b"<altro><x/></altro>"])
+def test_radice_che_non_e_un_feed(dati):
+    with pytest.raises(FetchError, match="non è un feed"):
+        parse_feed(dati, "feed", NOW)
+
+
+@pytest.mark.parametrize("tipo", ["rss", "html"])
+def test_url_senza_schema_rifiutato(tipo):
+    opzioni = {"url": "www.esempio.it/offerte"} | ({"elemento": "div"} if tipo == "html" else {})
+    with pytest.raises(ConfigError, match="senza schema"):
+        crea_fonte({"nome": "x", "tipo": tipo, **opzioni})
+
+
+@pytest.mark.parametrize("valore, atteso", [
+    ("27/10/2026", "2026-10-27T00:00:00+00:00"),
+    ("27/10/2026 10:30", "2026-10-27T10:30:00+00:00"),
+    ("1793095200", "2026-10-27T10:00:00+00:00"),
+    ("1793095200000", "2026-10-27T10:00:00+00:00"),
+])
+def test_parse_date_formati_in_piu(valore, atteso):
+    assert parse_date(valore).isoformat() == atteso
+
+
+@pytest.mark.parametrize("valore", [1e20, 10**30, float("nan"), float("inf"), True, "boh", None, ""])
+def test_parse_date_non_solleva_mai(valore):
+    assert parse_date(valore) is None
+
+
+@pytest.mark.parametrize("valore, atteso", [
+    ("nan", None), ("inf", None), (float("inf"), None), (float("nan"), None), (True, None), (False, None),
+    ("1_000", None), ("1.299", 1299.0), ("1.29", 1.29), ("12.345.678", 12345678.0),
+])
+def test_to_number_rifiuta_i_non_numeri(valore, atteso):
+    assert to_number(valore) == atteso

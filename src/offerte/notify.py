@@ -16,6 +16,7 @@ from .store import Offer
 
 log = logging.getLogger(__name__)
 API = "https://api.telegram.org/bot{token}/sendMessage"
+ATTESA_MASSIMA = 60.0  # tetto dell'attesa chiesta da Telegram con un 429
 
 
 def load_env(path: Path) -> None:
@@ -66,23 +67,34 @@ class Notifier:
         return cls(token, chat_id, **kwargs)
 
     def send(self, offer: Offer, rules: list[str]) -> bool:
-        if self._sent:
-            self._sleep(1.0)  # limite Telegram: circa un messaggio al secondo per chat
-        try:
-            resp = self._client.post(self._url, data={
-                "chat_id": self._chat_id, "text": format_message(offer, rules), "parse_mode": "HTML"})
-        except httpx.HTTPError as e:
-            log.error("notifica fallita: %s", type(e).__name__)  # mai l'URL: contiene il token
-            return False
-        self._sent += 1
-        if resp.status_code != 200:
+        for tentativo in range(2):
+            if self._sent:
+                self._sleep(1.0)  # limite Telegram: circa un messaggio al secondo per chat
             try:
-                desc = resp.json().get("description", "")
+                resp = self._client.post(self._url, data={
+                    "chat_id": self._chat_id, "text": format_message(offer, rules), "parse_mode": "HTML"})
+            except httpx.HTTPError as e:
+                log.error("notifica fallita: %s", type(e).__name__)  # mai l'URL: contiene il token
+                return False
+            self._sent += 1
+            if resp.status_code == 200:
+                return True
+            corpo = {}
+            try:
+                letto = resp.json()
             except ValueError:
-                desc = ""
+                letto = None
+            if isinstance(letto, dict):
+                corpo = letto
+            desc = corpo.get("description", "")
+            attesa = (corpo.get("parameters") or {}).get("retry_after")
+            if resp.status_code == 429 and tentativo == 0 and attesa is not None:
+                log.warning("notifica rinviata di %s s dal limite di Telegram, riprovo una volta", attesa)
+                self._sleep(min(float(attesa), ATTESA_MASSIMA))
+                continue
             log.error("notifica rifiutata (HTTP %s) %s", resp.status_code, desc)
             return False
-        return True
+        return False
 
     def close(self) -> None:
         self._client.close()

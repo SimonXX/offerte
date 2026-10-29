@@ -17,11 +17,20 @@ remote() {
 
 case "${1:-}" in
   restore)
-    if git -C "$ROOT" fetch -q --depth 1 "$(remote)" "$BRANCH" 2>/dev/null; then
+    # ls-remote distingue "branch assente" (rc 2) da "remoto irraggiungibile" (altro rc). Senza questa
+    # distinzione un errore di rete passerebbe per primo avvio, e il save successivo, che e' un push
+    # forzato, cancellerebbe storia, dedupe e notifiche gia' inviate.
+    rc=0
+    git -C "$ROOT" ls-remote --exit-code --heads "$(remote)" "$BRANCH" >/dev/null 2>&1 || rc=$?
+    if [ "$rc" -eq 0 ]; then
+      git -C "$ROOT" fetch -q --depth 1 "$(remote)" "$BRANCH"
       git -C "$ROOT" show FETCH_HEAD:offerte.sqlite > "$VAR/offerte.sqlite"
       echo "stato ripristinato dal branch $BRANCH ($(stat -c%s "$VAR/offerte.sqlite") byte)"
-    else
+    elif [ "$rc" -eq 2 ]; then
       echo "nessun branch $BRANCH: primo avvio"
+    else
+      echo "remoto non raggiungibile (ls-remote rc=$rc): mi fermo per non sovrascrivere lo stato" >&2
+      exit 1
     fi ;;
   save)
     if [ ! -f "$VAR/offerte.sqlite" ]; then echo "niente da salvare"; exit 0; fi

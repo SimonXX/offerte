@@ -122,7 +122,7 @@ def load_config(path: Path | str) -> Config:
     for i, rc in enumerate(data.get("canali") or []):  # scorciatoia: canali = fonti di tipo telegram
         if not isinstance(rc, dict) or not rc.get("nome"):
             raise ConfigError(f"canali[{i}]: serve almeno 'nome'")
-        _check_keys(f"canali[{i}]", rc, {"nome", "cartella", "attivo"})
+        _check_keys(f"canali[{i}]", rc, {"nome", "cartella", "attivo", "ogni", "canale", "pagine"})
         fonti.append(crea_fonte({**rc, "nome": str(rc["nome"]).strip().lstrip("@").lower(), "tipo": "telegram"}))
     for i, rf in enumerate(data.get("fonti") or []):
         if not isinstance(rf, dict):

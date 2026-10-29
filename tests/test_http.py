@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import httpx
 import pytest
 
@@ -46,3 +48,33 @@ def test_intervallo_di_cortesia():
     c.get("https://t.me/s/a")
     c.get("https://t.me/s/b")
     assert attese == [3.0]
+
+
+def test_errori_non_ritentabili_falliscono_subito():
+    chiamate = []
+
+    def handler(request):
+        chiamate.append(str(request.url))
+        raise httpx.TooManyRedirects("troppi redirect")
+
+    attese = []
+    with pytest.raises(FetchError, match="TooManyRedirects"):
+        Client("ua", courtesy=0, transport=httpx.MockTransport(handler), sleep=attese.append).get("https://e.com/x")
+    assert len(chiamate) == 1 and attese == []
+
+
+def test_retry_after_enorme_non_blocca_il_giro():
+    transport, chiamate = transport_con([httpx.Response(429, headers={"Retry-After": "3600"})])
+    attese = []
+    with pytest.raises(FetchError, match="budget"):
+        Client("ua", courtesy=0, transport=transport, sleep=attese.append).get("https://t.me/s/x")
+    assert len(chiamate) == 1 and attese == []
+
+
+def test_retry_after_come_data_http():
+    quando = (datetime.now(timezone.utc) + timedelta(seconds=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    transport, _ = transport_con([httpx.Response(503, headers={"Retry-After": quando}), httpx.Response(200, text="ok")])
+    attese = []
+    c = Client("ua", courtesy=0, transport=transport, sleep=attese.append)
+    assert c.get("https://t.me/s/x").text == "ok"
+    assert len(attese) == 1 and 25 <= attese[0] <= 30

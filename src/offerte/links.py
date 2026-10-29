@@ -23,6 +23,11 @@ RETAIL_HOST_RE = re.compile(r"(?:^|\.)(?:amazon|ebay|aliexpress|mediaworld|unieu
 AMAZON_HOST_RE = re.compile(r"(?:^|\.)amazon\.[a-z.]+$")
 ASIN_PATH_RE = re.compile(r"/(?:dp|gp/product|gp/aw/d|product|d)/([A-Z0-9]{10})(?![A-Z0-9])")
 ASIN_RE = re.compile(r"^[A-Z0-9]{10}$")
+# Solo le entità chiuse dal punto e virgola: html.unescape da solo decodifica anche le legacy senza ';'
+# e trasformerebbe "&currency=EUR" in "¤cy=EUR", "&section=" in "§ion=", "&region=" in "®ion=".
+ENTITY_RE = re.compile(r"&(?:[A-Za-z][A-Za-z0-9]{1,31}|#\d+|#[xX][0-9A-Fa-f]+);")
+# Schemi che non sono pagine web: senza questo controllo "tel:+3902..." diventerebbe "https://tel:+3902...".
+NON_WEB_SCHEME_RE = re.compile(r"(?i)^(?:mailto|tel|sms|javascript|data|geo|tg|whatsapp|callto|fax):")
 
 TRACKING_EXACT = {
     "fbclid", "gclid", "dclid", "gbraid", "wbraid", "msclkid", "yclid", "ttclid", "twclid", "igshid", "mc_cid",
@@ -47,10 +52,22 @@ def _host(url: str) -> str:
 
 def normalize_input(url: str) -> str:
     """Decodifica le entità HTML (capita `&amp;amp;` nei post) e aggiunge lo schema se manca."""
-    url = html.unescape(url.strip())
-    if "://" not in url:
+    url = url.strip()
+    for _ in range(2):  # due passate: i post reali arrivano con `&amp;amp;`
+        url = ENTITY_RE.sub(lambda m: html.unescape(m.group(0)), url)
+    if "://" not in url and not NON_WEB_SCHEME_RE.match(url):
         url = "https://" + url
     return url
+
+
+def is_web_url(url: str) -> bool:
+    """Vero solo per http e https con un host leggibile: scarta tel:, mailto: e le porte non numeriche."""
+    try:
+        parts = urlsplit(url)
+        porta = parts.port  # una porta non numerica solleva ValueError
+    except ValueError:
+        return False
+    return parts.scheme in ("http", "https") and bool(parts.hostname) and (porta is None or 0 < porta < 65536)
 
 
 def is_telegram(url: str) -> bool:
@@ -71,7 +88,7 @@ def pick_offer_link(links: list[str]) -> str | None:
     """Primo link esterno che non sia Telegram né un'immagine (i canali linkano foto per forzare l'anteprima)."""
     for raw in links:
         url = normalize_input(raw)
-        if _host(url) and not is_telegram(url) and not is_social(url) and not is_image_url(url):
+        if is_web_url(url) and not is_telegram(url) and not is_social(url) and not is_image_url(url):
             return url
     return None
 

@@ -206,6 +206,29 @@ class Store:
         self.db.execute("INSERT OR IGNORE INTO matches(rule, offer_id, matched_at) VALUES (?,?,?)", (rule, offer_id, now))
         self.db.commit()
 
+    def pending_notifications(self, rule_names: list[str], since: str) -> list[tuple[Offer, list[str]]]:
+        """Offerte da notificare: hanno un match di una regola `notify`, nessuna notifica inviata e sono recenti.
+
+        Guidata dal database, non dal giro: un invio fallito o un giro interrotto si recuperano al giro dopo,
+        finché l'offerta resta dentro la finestra di `notifica_max_ore`.
+        """
+        if not rule_names:
+            return []
+        marks = ",".join("?" * len(rule_names))
+        rows = self.db.execute(
+            f"SELECT o.*, m.rule AS rule FROM offers o JOIN matches m ON m.offer_id = o.id"
+            f" LEFT JOIN notifications n ON n.offer_id = o.id"
+            f" WHERE n.offer_id IS NULL AND m.rule IN ({marks}) AND o.posted_at >= ?"
+            f" ORDER BY o.posted_at, o.id, m.rule", (*rule_names, since)).fetchall()
+        out: dict[int, tuple[Offer, list[str]]] = {}
+        for row in rows:
+            d = dict(row)
+            regola = d.pop("rule")
+            if d["id"] not in out:
+                out[d["id"]] = (_offer(d), [])
+            out[d["id"]][1].append(regola)
+        return list(out.values())
+
     def is_notified(self, offer_id: int) -> bool:
         return self.db.execute("SELECT 1 FROM notifications WHERE offer_id = ?", (offer_id,)).fetchone() is not None
 

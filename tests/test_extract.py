@@ -61,3 +61,48 @@ def test_nome_prodotto():
 def test_estrazione_completa():
     ex = extract("🔥 Cuffie Sony WH-CH520 Bluetooth\n\n💶 € 29.99 49,99€ (-40%)\n🎟 Coupon: SONY10", struck=["49,99€"])
     assert (ex.title, ex.price, ex.old_price, ex.discount, ex.coupon) == ("Cuffie Sony WH-CH520 Bluetooth", 29.99, 49.99, 40, "SONY10")
+
+
+@pytest.mark.parametrize("testo, atteso", [
+    ("SSD Samsung 980 1TB 79,99€\nCoupon 10€ in pagina", (79.99, None)),
+    ("Cuffie Sony WH-1000XM5 289€\nSpedizione 4,99€", (289.0, None)),
+    ("Echo Dot 29,99€\nCashback 5€ con PayPal", (29.99, None)),
+    ("59,90€ + spedizione 4,99€", (59.90, None)),
+    ("Sconto di 30€ sul totale, prezzo finale 199€", (199.0, None)),
+    ("59,90€ spedizione gratuita", (59.90, None)),
+])
+def test_importi_di_rumore_non_sono_il_prezzo(testo, atteso):
+    assert extract_prices(testo) == atteso
+
+
+@pytest.mark.parametrize("testo, atteso", [
+    ("Fotocamera 199€", 199.0),      # "era" dentro "Fotocamera" non è un indizio di prezzo pieno
+    ("Lampada 9,99€", 9.99),         # né "da" dentro "Lampada"
+    ("Scheda 80€", 80.0),
+    ("Cuffie a partire da 19,99€", 19.99),   # "a partire da" è il prezzo minimo attuale
+])
+def test_indizi_di_barrato_con_confine_di_parola(testo, atteso):
+    assert extract_prices(testo) == (atteso, None)
+
+
+def test_simbolo_come_prefisso_non_ruba_il_numero_precedente():
+    assert extract_prices("Apple Watch Series 9 € 299") == (299.0, None)
+    assert extract_prices("Modello 2024 € 59,99") == (59.99, None)
+    assert extract_prices("59,99 € 99,99 €") == (59.99, 99.99)  # con i decimali la guardia non scatta
+
+
+def test_due_importi_solo_sulla_stessa_riga():
+    assert extract_prices("Monitor 199€\nAbbonamento 9€ al mese") == (199.0, None)
+    assert extract_prices("Monitor 199€ 299€") == (199.0, 299.0)
+
+
+@pytest.mark.parametrize("segno", ["-", "\N{MINUS SIGN}", "\N{EN DASH}"])
+def test_sconto_con_segno(segno):
+    assert find_discount(f"Cashback 10% su Prime, {segno}40% oggi") == 40
+
+
+def test_sconto_calcolato_batte_una_percentuale_estranea():
+    ex = extract("Cuffie JBL 49,99€ invece di 79,99€ (IVA 22% inclusa)")
+    assert (ex.price, ex.old_price, ex.discount) == (49.99, 79.99, 38)
+    assert extract("SSD 1TB 59,99€ + cashback 5%").discount is None
+    assert find_discount("Errore di prezzo: sconto 100%") == 100

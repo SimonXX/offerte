@@ -50,3 +50,29 @@ def test_ripubblicata_dopo_la_finestra(tmp_path):
         a, _ = process_message(store, NoResolve(), msg("alfa", 1, "SSD", link), now=NOW, dedupe_since=SINCE)
         b, nuova = process_message(store, NoResolve(), msg("alfa", 2, "SSD", link), now="2026-11-10T12:00:00+00:00", dedupe_since="2026-11-03T12:00:00+00:00")
         assert nuova and b != a
+
+
+def test_ripost_con_prezzo_piu_basso_e_offerta_nuova(tmp_path):
+    with Store(tmp_path / "db.sqlite") as store:
+        link = ["https://www.amazon.it/dp/B08GLX7TNT"]
+        a, _ = process_message(store, NoResolve(), msg("alfa", 1, "SSD 1TB\n79,99€", link), now=NOW, dedupe_since=SINCE)
+        b, nuova = process_message(store, NoResolve(), msg("alfa", 2, "PREZZO CROLLATO\nSSD 1TB\n39,99€", link),
+                                   now=NOW, dedupe_since=SINCE)
+        assert nuova and b != a
+        assert store.get_offer(b).price == 39.99 and store.get_offer(a).price == 79.99
+
+
+def test_ripost_senza_prezzo_si_aggrega(tmp_path):
+    with Store(tmp_path / "db.sqlite") as store:
+        link = ["https://www.amazon.it/dp/B08GLX7TNT"]
+        a, _ = process_message(store, NoResolve(), msg("alfa", 1, "SSD 1TB\n79,99€", link), now=NOW, dedupe_since=SINCE)
+        b, nuova = process_message(store, NoResolve(), msg("beta", 2, "SSD 1TB disponibile", link), now=NOW, dedupe_since=SINCE)
+        assert b == a and not nuova
+
+
+def test_ribasso_sotto_soglia_si_aggrega(tmp_path):
+    with Store(tmp_path / "db.sqlite") as store:
+        link = ["https://www.amazon.it/dp/B08GLX7TNT"]
+        a, _ = process_message(store, NoResolve(), msg("alfa", 1, "SSD 1TB\n79,99€", link), now=NOW, dedupe_since=SINCE)
+        b, nuova = process_message(store, NoResolve(), msg("alfa", 2, "SSD 1TB\n77,00€", link), now=NOW, dedupe_since=SINCE)
+        assert b == a and not nuova  # meno del 5% di ribasso: è lo stesso annuncio

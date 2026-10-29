@@ -20,6 +20,11 @@ from .store import SourceState, Store
 
 log = logging.getLogger(__name__)
 
+# Un ripost dello stesso link a un prezzo almeno cosi' piu' basso e' un'offerta nuova, non un duplicato:
+# e' proprio il ribasso l'evento che interessa, e le regole lo vedono solo se nasce una riga nuova.
+RIBASSO_MINIMO = 0.05
+MAX_NOTIFICHE_PER_GIRO = 30
+
 
 @dataclass
 class RunSummary:
@@ -56,23 +61,34 @@ def resolve_link(store: Store, client: Client, url: str, now: str) -> str:
     return resolved
 
 
+def is_ribasso(vecchio: float | None, nuovo: float | None) -> bool:
+    """Vero se il prezzo nuovo è inferiore al precedente di almeno RIBASSO_MINIMO."""
+    if vecchio is None or nuovo is None:
+        return False
+    return nuovo <= vecchio * (1 - RIBASSO_MINIMO)
+
+
 def process_message(store: Store, client: Client, m: Message, *, now: str, dedupe_since: str) -> tuple[int, bool]:
     """Inserisce o aggrega il messaggio. Torna (id offerta, True se l'offerta è nuova)."""
     raw_link = L.pick_offer_link(m.links)
-    link = L.clean_url(resolve_link(store, client, raw_link, now)) if raw_link else None
+    try:
+        link = L.clean_url(resolve_link(store, client, raw_link, now)) if raw_link else None
+    except ValueError:  # URL malformato: il messaggio resta, senza link, con la chiave calcolata dal testo
+        log.warning("fonte %s, elemento %s: link inutilizzabile, resta il solo testo", m.channel, m.id)
+        link = None
     key = offer_key(link, m.text)
     posted_at = iso(m.date)
+    ex = extract(m.text, m.struck)
+    price = m.price if m.price is not None else ex.price
+    old_price = m.old_price if m.old_price is not None else ex.old_price
+    discount = ex.discount
+    if (m.price is not None or m.old_price is not None) and price and old_price and old_price > price:
+        discount = round((1 - price / old_price) * 100) or None
     existing = store.find_offer(key, dedupe_since)
-    if existing:
+    if existing is not None and not is_ribasso(existing.price, price):
         store.touch_offer(existing.id, m.channel, now)
         offer_id, created = existing.id, False
     else:
-        ex = extract(m.text, m.struck)
-        price = m.price if m.price is not None else ex.price
-        old_price = m.old_price if m.old_price is not None else ex.old_price
-        discount = ex.discount
-        if (m.price is not None or m.old_price is not None) and price and old_price and old_price > price:
-            discount = round((1 - price / old_price) * 100) or None
         image = m.image or next((L.normalize_input(u) for u in m.links if L.is_image_url(u)), None)
         offer_id = store.insert_offer(
             key=key, title=ex.title, text=m.text, link=link, permalink=m.permalink or link or "", image=image,
@@ -131,7 +147,12 @@ def run_fetch(config: Config, store: Store, client: Client, notifier: Notifier |
             if created:
                 s.new_offers.append(offer_id)
                 nuove += 1
-        store.update_channel(fonte.nome, status="ok", now=now_s, last_id=result.last_id, bootstrapped=True)
+                if m.date == now_dt and not state.bootstrapped:
+                    # Data di ripiego al primo giro di una fonte: non sappiamo quando è stata pubblicata,
+                    # quindi la segniamo come già notificata invece di mandarne una raffica.
+                    store.mark_notified(offer_id, now_s)
+        stato_fonte = "vuota" if result.vuota else "ok"
+        store.update_channel(fonte.nome, status=stato_fonte, now=now_s, last_id=result.last_id, bootstrapped=True)
         s.ok.append(fonte.nome)
         log.info("fonte %s: %d elementi nuovi, %d offerte nuove", fonte.nome, len(result.items), nuove)
 
@@ -142,18 +163,17 @@ def run_fetch(config: Config, store: Store, client: Client, notifier: Notifier |
             s.matches[r.nome] = s.matches.get(r.nome, 0) + 1
 
     if notifier is not None:
-        fresh = set(s.new_offers)
+        nomi_notify = [r.nome for r in config.regole if r.notify]
         min_posted = iso(now_dt - timedelta(hours=p.notifica_max_ore))
-        for offer_id, rules in new_matches.items():
-            da_notificare = [r.nome for r in rules if r.notify]
-            if offer_id not in fresh or not da_notificare or store.is_notified(offer_id):
-                continue
-            offer = store.get_offer(offer_id)
-            if offer.posted_at < min_posted:
-                continue
-            if notifier.send(offer, da_notificare):
-                store.mark_notified(offer_id, now_s)
+        in_coda = store.pending_notifications(nomi_notify, min_posted)
+        for offer, regole_scattate in in_coda[:MAX_NOTIFICHE_PER_GIRO]:
+            if notifier.send(offer, regole_scattate):
+                store.mark_notified(offer.id, now_s)
                 s.notified += 1
+        restanti = len(in_coda) - MAX_NOTIFICHE_PER_GIRO
+        if restanti > 0:
+            log.info("notifiche: %d restano in coda per il prossimo giro (tetto di %d per giro)",
+                     restanti, MAX_NOTIFICHE_PER_GIRO)
 
     if p.giorni_ritenzione > 0:
         tolte = store.purge(iso(now_dt - timedelta(days=p.giorni_ritenzione)))
