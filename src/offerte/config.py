@@ -36,6 +36,7 @@ class Rule:
     prezzo_min: float | None = None
     sconto_min: int | None = None  # percentuale minima; un'offerta senza sconto non passa
     solo_coupon: bool = False
+    attiva: bool = True  # spenta resta in config ma non scatta, non notifica e non ha un feed
     # Le stringhe come sono scritte in config: le regex compilate non si possono rileggere, e la dashboard
     # deve poter mostrare la regola e riprodurla nei propri filtri.
     parole_src: tuple[str, ...] = ()
@@ -74,6 +75,9 @@ class Config:
 
     def fonti_attive(self) -> list["Source"]:
         return [f for f in self.fonti if f.attivo]
+
+    def regole_attive(self) -> tuple[Rule, ...]:
+        return tuple(r for r in self.regole if r.attiva)
 
     def cartelle(self) -> dict[str, list[str]]:
         """Cartella -> nomi delle fonti attive che vi appartengono."""
@@ -168,7 +172,7 @@ def load_config(path: Path | str) -> Config:
         if not isinstance(rr, dict) or not rr.get("nome"):
             raise ConfigError(f"regole[{i}]: serve almeno 'nome'")
         _check_keys(f"regole[{i}]", rr, {"nome", "parole", "prezzo_max", "prezzo_min", "canali", "notify", "tutte",
-                                         "escludi", "sconto_min", "solo_coupon"})
+                                         "escludi", "sconto_min", "solo_coupon", "attiva"})
         nome = str(rr["nome"]).strip()
         parole = [str(p) for p in _as_list(rr.get("parole"))]
         sconto_min = rr.get("sconto_min")
@@ -211,6 +215,7 @@ def load_config(path: Path | str) -> Config:
             prezzo_min=None if prezzo_min is None else float(prezzo_min),
             sconto_min=sconto_min,
             solo_coupon=solo_coupon,
+            attiva=bool(rr.get("attiva", True)),
             parole_src=tuple(parole),
             escludi_src=tuple(str(p) for p in _as_list(rr.get("escludi"))),
             canali_src=canali_src,

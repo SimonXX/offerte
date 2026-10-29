@@ -59,20 +59,47 @@ canali:
   - {nome: rafficaffari,        cartella: raffica, pagine: 25}       # RafficAffari, Offerte Bomba ed Errori di Prezzo, ~80/g
 
 regole:
+  # Ogni regola e' una campagna a se': si accende e si spegne con `attiva`, senza cancellarla.
+  # Una regola spenta resta nella dashboard come preset, ma non scatta, non notifica e non ha un feed.
   - nome: ssd-sotto-60
     parole: ["ssd", "nvme", '/\b[12]\s?tb\b/']   # parola intera, oppure regex fra barre
     prezzo_max: 60
     canali: [informatica]            # nomi di canale o di cartella; assente = tutti
     notify: true
+    attiva: true
   - nome: apple-watch-sotto-250
     parole: ["apple watch", '/\bwatch\s*(se|series|ultra)\b/']
     escludi: [cinturino, cinturini, cover, pellicola, vetro, caricatore, cavo, supporto, custodia]
     prezzo_max: 250
     notify: true
+    attiva: true
   - nome: errori-di-prezzo
     parole: ["errore di prezzo", '/sconto:?\s*[7-9]\d\s?%/']
     canali: [erroridiprezzo, erroridiprezzo_offertedalweb, rafficaffari]
     notify: false
+    attiva: true
+  # Campagne di esempio, spente: si accendono mettendo `attiva: true`.
+  - nome: ram-ddr5-32gb-sotto-90
+    parole: ['/\bddr5\b/', '/\b(2\s?x\s?16|32)\s?gb\b/']
+    tutte: true                      # servono tutte e due, non una sola
+    escludi: [so-dimm, sodimm, portatile, notebook, rigenerat]
+    prezzo_max: 90
+    canali: [informatica]
+    notify: true
+    attiva: false
+  - nome: ram-ddr4-16gb-sotto-35
+    parole: ['/\bddr4\b/', '/\b16\s?gb\b/']
+    tutte: true
+    escludi: [so-dimm, sodimm, portatile, notebook, rigenerat]
+    prezzo_max: 35
+    canali: [informatica]
+    notify: true
+    attiva: false
+  - nome: sconti-oltre-70-con-coupon
+    sconto_min: 70                   # senza parole: vale tutto cio' che passa i criteri numerici
+    solo_coupon: true
+    notify: false                    # notify senza parole non e' ammesso: notificherebbe a raffica
+    attiva: false
 ```
 
 Una regola scatta se almeno una parola compare nel testo (con `tutte: true` devono comparire tutte). Una parola
@@ -85,7 +112,14 @@ estratto: un'offerta senza prezzo non passa un filtro di prezzo. `sconto_min` è
 
 Le parole sono facoltative se c'è almeno un altro criterio (`prezzo_min`, `prezzo_max`, `sconto_min`,
 `solo_coupon`, `canali`): «tutto quello che sta sotto 20 euro» è una regola valida. `escludi` da solo non basta, e
-una regola senza parole non può avere `notify: true`, altrimenti notificherebbe a raffica. Le regole si valutano a ogni giro sulle offerte della finestra `feed_giorni`, quindi
+una regola senza parole non può avere `notify: true`, altrimenti notificherebbe a raffica.
+
+**Ogni regola è una campagna a sé e si accende e si spegne con `attiva`**, senza cancellarla. Puoi tenerne dieci
+in config e averne due accese: «RAM DDR5 32 GB sotto 90», «RAM DDR4 16 GB sotto 35», «sconti oltre il 70% con
+coupon». Una regola spenta non viene valutata, non registra corrispondenze, non manda notifiche e il suo feed
+viene rimosso; resta però fra i preset della dashboard, segnata «spenta», così puoi vedere cosa pescherebbe
+prima di riaccenderla. Quando la riaccendi riparte dalle offerte ancora dentro la finestra `feed_giorni`, non da
+tutto lo storico. Le regole si valutano a ogni giro sulle offerte della finestra `feed_giorni`, quindi
 una regola nuova popola subito il proprio feed con il pregresso; le notifiche partono solo per le offerte nuove del giro.
 
 ## Fonti

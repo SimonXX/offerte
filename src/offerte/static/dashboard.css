@@ -137,6 +137,8 @@ summary { cursor: pointer; padding: 8px 0; min-height: 44px; display: list-item;
 .preset, .chip { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
 .chip:empty, .preset:empty { display: none; }
 .preset-voce { display: inline-flex; align-items: center; gap: 6px; }
+.preset-spenta button { opacity: 0.65; border-style: dashed; }
+.etichetta-spenta { color: var(--testo-2); font-size: 0.8rem; }
 .riga-conta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
 #conta { font-weight: 600; }
 .riga-altre { margin: 16px 0; }

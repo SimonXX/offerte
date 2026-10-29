@@ -157,12 +157,12 @@ def dashboard_cartelle(config: Config) -> dict[str, list[str]]:
 
 
 def dashboard_regole(config: Config) -> list[dict]:
-    """Le regole come sono scritte in config: la pagina le usa per i preset e per «Crea regola»."""
+    """Le regole come sono scritte in config, anche le spente: la pagina le mostra come preset dormienti."""
     out = []
     for r in config.regole:
         voce: dict = {"nome": r.nome, "slug": slug(r.nome), "parole": list(r.parole_src),
                       "escludi": list(r.escludi_src), "canali": list(r.canali_src),
-                      "tutte": r.tutte, "solo_coupon": r.solo_coupon}
+                      "tutte": r.tutte, "solo_coupon": r.solo_coupon, "attiva": r.attiva}
         if r.prezzo_min is not None:
             voce["prezzo_min"] = r.prezzo_min
         if r.prezzo_max is not None:
@@ -326,7 +326,7 @@ def write_feeds(store: Store, config: Config, now: datetime) -> list[tuple[str, 
 
     for cartella, canali in sorted(config.cartelle().items()):
         emit("cartella", cartella, f"Offerte {cartella}", store.offers_for_channels(canali, since, p.feed_max_elementi))
-    for rule in config.regole:
+    for rule in config.regole_attive():
         emit("regola", rule.nome, f"Alert {rule.nome}", store.offers_for_rule(rule.nome, since, p.feed_max_elementi))
     for gruppo in ("cartella", "regola"):  # solo le cartelle dei feed: dashboard.json sta nella radice
         for stale in (base / gruppo).glob("*"):

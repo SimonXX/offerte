@@ -683,3 +683,44 @@ crei all'apertura e non al rendering.
 
 Aprire il grafico comunica al servizio quale prodotto si sta guardando. La pagina manda `no-referrer`, quindi
 non comunica da dove, e la richiesta parte solo al clic. Si spegne con `grafico_prezzi: ""`.
+
+## S11, regole come campagne accendibili
+
+Data: 29 ottobre 2026.
+
+### Cosa è stato fatto
+
+`Rule` guadagna `attiva: bool = True` e `Config.regole_attive()`. Una regola spenta resta scritta in
+`config.yaml` ma non viene valutata da `apply_rules`, non entra fra i nomi passati a `pending_notifications`,
+e il suo feed non viene più scritto: la pulizia di `write_feeds` lo rimuove da sola al giro dopo.
+
+`dashboard_regole` continua a esporre **tutte** le regole, con il campo `attiva`, perché la pagina le mostri
+come preset dormienti: una campagna spenta compare con il bordo tratteggiato e l'etichetta «spenta», senza
+link RSS, e il suo conteggio dice cosa pescherebbe se la riaccendessi. Il filtro si può applicare lo stesso.
+
+`config.yaml` ha ora sei regole, tre accese e tre spente d'esempio, fra cui due campagne RAM
+(`ram-ddr5-32gb-sotto-90`, `ram-ddr4-16gb-sotto-35`) e una senza parole (`sconti-oltre-70-con-coupon`).
+
+Riaccendere una regola la fa ripartire dalle offerte ancora dentro `feed_giorni`, non da tutto lo storico:
+`apply_rules` lavora sulla finestra, non sul database intero. Documentato nel README.
+
+### Test
+
+311 prima, **314 dopo** (+3): regola spenta che resta in config ma fuori da `regole_attive()`, giro completo in
+cui la spenta non registra match e non scrive il feed mentre l'accesa sì, e presenza della spenta fra le voci
+di `dashboard_regole` con `attiva: false`.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 314 passed in 36,4 s |
+| controllo trattini | nessuna riga |
+| `load_config` su `config.yaml` | 6 regole, 3 attive |
+| Chrome sulla dashboard | sei preset, tre «accesa» e tre «spenta» con il conteggio |
+
+### Errore commesso durante il lavoro
+
+La prima scrittura degli esempi ha usato `s.index("regole:")`, che ha trovato `dashboard_regole:` nel blocco
+dei parametri e ha troncato il file da lì in poi, cancellando `canali:`. Ripristinato con `git checkout` e
+rifatto con un ancoraggio `^regole:$`. Il controllo che l'ha intercettato è stato `load_config`, non i test.

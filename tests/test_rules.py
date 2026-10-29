@@ -169,3 +169,55 @@ def test_config_dashboard_max_offerte(tmp_path, valore, errore):
             load_config(tmp_path / "config.yaml")
     else:
         assert load_config(tmp_path / "config.yaml").parametri.dashboard_max_offerte == 1
+
+
+def config_con_regole(tmp_path, testo_regole):
+    (tmp_path / "config.yaml").write_text(
+        "canali: [{nome: a, cartella: informatica}]\nregole:\n" + testo_regole, encoding="utf-8")
+    return load_config(tmp_path / "config.yaml")
+
+
+def test_regola_spenta_resta_in_config_ma_non_e_attiva(tmp_path):
+    cfg = config_con_regole(tmp_path,
+                            "  - {nome: accesa, parole: [ssd]}\n"
+                            "  - {nome: spenta, parole: [ram], attiva: false}\n")
+    assert [r.nome for r in cfg.regole] == ["accesa", "spenta"]
+    assert [r.nome for r in cfg.regole_attive()] == ["accesa"]
+    assert cfg.regole[0].attiva is True and cfg.regole[1].attiva is False
+
+
+def test_regola_spenta_non_scatta_e_non_notifica(tmp_path):
+    """Una campagna spenta non registra match, non scrive il suo feed e non manda notifiche."""
+    import yaml
+    from offerte.feeds import write_feeds
+    from offerte.fetch import run_fetch
+    from offerte.store import Store
+    import httpx
+    from offerte.http import Client
+
+    cfg = {
+        "parametri": {"intervallo_cortesia": 0, "var_dir": str(tmp_path / "var")},
+        "fonti": [{"nome": "finta", "tipo": "fonte_finta:FonteFinta", "cartella": "casa", "n": 2}],
+        "regole": [{"nome": "accesa", "parole": ["prodotto"]},
+                   {"nome": "spenta", "parole": ["prodotto"], "attiva": False}],
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    config = load_config(tmp_path / "config.yaml")
+    with Store(tmp_path / "var" / "db.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=httpx.MockTransport(lambda r: httpx.Response(404)),
+                        sleep=lambda s: None)
+        s = run_fetch(config, store, client, None)
+        assert set(s.matches) == {"accesa"}
+        write_feeds(store, config, __import__("datetime").datetime.now(__import__("datetime").timezone.utc))
+    feeds = tmp_path / "var" / "feeds" / "regola"
+    assert (feeds / "accesa.xml").exists() and not (feeds / "spenta.xml").exists()
+
+
+def test_regola_spenta_resta_nella_dashboard(tmp_path):
+    from offerte.feeds import dashboard_regole
+    cfg = config_con_regole(tmp_path,
+                            "  - {nome: accesa, parole: [ssd]}\n"
+                            "  - {nome: spenta, parole: [ram], attiva: false}\n")
+    voci = dashboard_regole(cfg)
+    assert [v["nome"] for v in voci] == ["accesa", "spenta"]
+    assert [v["attiva"] for v in voci] == [True, False]

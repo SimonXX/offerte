@@ -707,14 +707,23 @@
     if (DOM.preset.childNodes.length !== regole.length) {
       svuota(DOM.preset);
       regole.forEach(function (r) {
-        var voce = crea("span", "preset-voce");
+        var spenta = r.attiva === false;
+        var voce = crea("span", spenta ? "preset-voce preset-spenta" : "preset-voce");
         var b = crea("button", null, r.nome);
         b.type = "button";
         b.setAttribute("data-regola", r.nome);
+        if (spenta) {
+          // Una regola spenta non raccoglie e non ha un feed, ma il filtro si puo' ancora provare.
+          b.title = "regola spenta in config.yaml: non notifica e non ha un feed";
+        }
         voce.appendChild(b);
-        var rss = crea("a", null, "RSS");
-        rss.href = "regola/" + r.slug + ".xml";
-        voce.appendChild(rss);
+        if (!spenta) {
+          var rss = crea("a", null, "RSS");
+          rss.href = "regola/" + r.slug + ".xml";
+          voce.appendChild(rss);
+        } else {
+          voce.appendChild(crea("span", "etichetta-spenta", "spenta"));
+        }
         DOM.preset.appendChild(voce);
       });
     }

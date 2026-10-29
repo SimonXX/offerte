@@ -95,17 +95,44 @@ fonti: []
 #    ogni: 60
 
 regole:
+  # Ogni regola e' una campagna a se': si accende e si spegne con `attiva`, senza cancellarla.
+  # Una regola spenta resta nella dashboard come preset, ma non scatta, non notifica e non ha un feed.
   - nome: ssd-sotto-60
     parole: ["ssd", "nvme", '/\b[12]\s?tb\b/']   # parola intera, oppure regex fra barre
     prezzo_max: 60
     canali: [informatica]            # nomi di canale o di cartella; assente = tutti
     notify: true
+    attiva: true
   - nome: apple-watch-sotto-250
     parole: ["apple watch", '/\bwatch\s*(se|series|ultra)\b/']
     escludi: [cinturino, cinturini, cover, pellicola, vetro, caricatore, cavo, supporto, custodia]
     prezzo_max: 250
     notify: true
+    attiva: true
   - nome: errori-di-prezzo
     parole: ["errore di prezzo", '/sconto:?\s*[7-9]\d\s?%/']
     canali: [erroridiprezzo, erroridiprezzo_offertedalweb, rafficaffari]
     notify: false
+    attiva: true
+  # Campagne di esempio, spente: si accendono mettendo `attiva: true`.
+  - nome: ram-ddr5-32gb-sotto-90
+    parole: ['/\bddr5\b/', '/\b(2\s?x\s?16|32)\s?gb\b/']
+    tutte: true                      # servono tutte e due, non una sola
+    escludi: [so-dimm, sodimm, portatile, notebook, rigenerat]
+    prezzo_max: 90
+    canali: [informatica]
+    notify: true
+    attiva: false
+  - nome: ram-ddr4-16gb-sotto-35
+    parole: ['/\bddr4\b/', '/\b16\s?gb\b/']
+    tutte: true
+    escludi: [so-dimm, sodimm, portatile, notebook, rigenerat]
+    prezzo_max: 35
+    canali: [informatica]
+    notify: true
+    attiva: false
+  - nome: sconti-oltre-70-con-coupon
+    sconto_min: 70                   # senza parole: vale tutto cio' che passa i criteri numerici
+    solo_coupon: true
+    notify: false                    # notify senza parole non e' ammesso: notificherebbe a raffica
+    attiva: false

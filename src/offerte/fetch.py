@@ -157,13 +157,13 @@ def run_fetch(config: Config, store: Store, client: Client, notifier: Notifier |
         log.info("fonte %s: %d elementi nuovi, %d offerte nuove", fonte.nome, len(result.items), nuove)
 
     window = iso(now_dt - timedelta(days=p.feed_giorni))
-    new_matches = apply_rules(store, config.regole, since=window, now=now_s)
+    new_matches = apply_rules(store, config.regole_attive(), since=window, now=now_s)
     for rules in new_matches.values():
         for r in rules:
             s.matches[r.nome] = s.matches.get(r.nome, 0) + 1
 
     if notifier is not None:
-        nomi_notify = [r.nome for r in config.regole if r.notify]
+        nomi_notify = [r.nome for r in config.regole_attive() if r.notify]
         min_posted = iso(now_dt - timedelta(hours=p.notifica_max_ore))
         in_coda = store.pending_notifications(nomi_notify, min_posted)
         for offer, regole_scattate in in_coda[:MAX_NOTIFICHE_PER_GIRO]:
