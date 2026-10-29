@@ -361,3 +361,71 @@ def test_etichetta_senza_query():
     assert etichetta("https://privato.example/rss?token=X") == "https://privato.example/rss"
     assert etichetta("https://privato.example/rss?token=X", "fonte") == "fonte"
     assert etichetta("https://utente:password@host.example:8443/a?b=1") == "https://host.example:8443/a"
+
+
+def pagina_telegram(canale: str, ids: list[int]) -> str:
+    corpo = "".join(
+        f'<div class="tgme_widget_message" data-post="{canale}/{i}">'
+        f'<time datetime="2026-10-27T10:00:00+00:00"></time>'
+        f'<div class="tgme_widget_message_text js-message_text">Offerta {i}\n{i},00 €</div></div>'
+        for i in ids)
+    return f'<html><body><div class="tgme_channel_info"></div>{corpo}</body></html>'
+
+
+def canale_finto(ultimo: int, per_pagina: int = 20):
+    """Trasporto che pagina all'indietro da `ultimo` con ?before=, venti messaggi per pagina."""
+    letture = []
+
+    def handler(request):
+        letture.append(str(request.url))
+        prima = request.url.params.get("before")
+        alto = int(prima) - 1 if prima else ultimo
+        ids = [i for i in range(alto - per_pagina + 1, alto + 1) if i > 0]
+        return httpx.Response(200, text=pagina_telegram("canale", ids))
+
+    return httpx.MockTransport(handler), letture
+
+
+def test_telegram_primo_giro_si_ferma_a_pagine_storico(tmp_path):
+    from offerte.sources.telegram import TelegramSource
+    transport, letture = canale_finto(ultimo=200)
+    fonte = TelegramSource("canale", "casa", {})
+    c = ctx(tmp_path, transport)
+    c.pages = 3
+    result = fonte.fetch(c)
+    assert len(letture) == 3 and len(result.items) == 60 and result.last_id == 200
+
+
+def test_telegram_giro_incrementale_recupera_il_pregresso(tmp_path):
+    """Dopo una pausa lunga il ciclo deve arrivare fino all'ultimo id noto, non fermarsi a pagine_storico."""
+    from offerte.sources.telegram import TelegramSource
+    transport, letture = canale_finto(ultimo=300)
+    fonte = TelegramSource("canale", "casa", {})
+    c = ctx(tmp_path, transport)
+    c.pages = 3
+    c.state = SourceState(last_id=100, bootstrapped=True)
+    result = fonte.fetch(c)
+    assert len(letture) == 11  # fino a 101, piu' una pagina per incontrare un id noto: non tre
+    letti = [m.id for m in result.items]
+    assert len(letti) == 200 and min(letti) == 101 and max(letti) == 300
+    assert result.last_id == 300
+
+
+def test_telegram_avvisa_se_le_pagine_finiscono_prima(tmp_path, caplog):
+    from offerte.sources.telegram import fetch_channel_messages
+    transport, _ = canale_finto(ultimo=300)
+    client = Client("ua", courtesy=0, transport=transport, sleep=lambda s: None)
+    with caplog.at_level("WARNING"):
+        out, max_seen = fetch_channel_messages(client, "canale", last_id=100, max_pages=3)
+    assert max_seen == 300 and min(m.id for m in out) == 241
+    assert "possono essere stati saltati" in caplog.text or "saltati" in caplog.text
+
+
+def test_voci_di_canali_accettano_ogni_canale_pagine(tmp_path):
+    """Il README promette `ogni`, `canale` e `pagine` anche nelle voci di `canali:`."""
+    (tmp_path / "config.yaml").write_text(
+        "canali:\n  - {nome: alias, cartella: casa, ogni: 30, canale: vero_canale, pagine: 5}\n"
+        "regole: [{nome: r, parole: [ssd]}]\n", encoding="utf-8")
+    fonte = load_config(tmp_path / "config.yaml").fonti[0]
+    assert (fonte.nome, fonte.ogni, fonte.canale) == ("alias", 30, "vero_canale")
+    assert int(fonte.opzione("pagine")) == 5

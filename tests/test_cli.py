@@ -153,3 +153,38 @@ class _ClientFinto:
 
     def close(self):
         pass
+
+
+def test_load_env_prima_di_load_config(tmp_path, monkeypatch, capsys):
+    """OFFERTE_FEED_BASE_URL scritta in .env deve avere effetto: load_env gira prima di load_config."""
+    ambiente = {k: v for k, v in __import__("os").environ.items() if not k.startswith("OFFERTE_")}
+    monkeypatch.setattr("os.environ", ambiente)
+    dati = {"parametri": {"var_dir": str(tmp_path / "var"), "feed_base_url": "http://127.0.0.1:8099"},
+            "canali": [{"nome": "alfa", "cartella": "casa"}],
+            "regole": [{"nome": "r", "parole": ["ssd"]}]}
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(dati, allow_unicode=True), encoding="utf-8")
+    (tmp_path / ".env").write_text("OFFERTE_FEED_BASE_URL=https://utente.github.io/offerte\n", encoding="utf-8")
+    assert main(["-c", str(tmp_path / "config.yaml"), "feed"]) == 0
+    indice = (tmp_path / "var" / "feeds" / "index.html").read_text(encoding="utf-8")
+    assert "https://utente.github.io/offerte/cartella/casa.xml" in indice
+
+
+def test_readme_elenca_tutti_i_sottocomandi():
+    from offerte.cli import COMMANDS
+    readme = (RADICE / "README.md").read_text(encoding="utf-8")
+    tabella = readme.split("## Comandi", 1)[1].split("## Feed", 1)[0]
+    elencati = set(re.findall(r"\| `offerte ([a-z]+)", tabella))
+    assert set(COMMANDS) == elencati, f"mancano nel README: {set(COMMANDS) - elencati}"
+
+
+def test_readme_sulle_opzioni_globali_e_sul_container():
+    readme = (RADICE / "README.md").read_text(encoding="utf-8")
+    # le opzioni globali vanno prima del sottocomando
+    assert "prima del sottocomando" in readme
+    # il comando del container non deve pretendere un .env che il README presenta come facoltativo
+    container = readme.split("## Container", 1)[1].split("##", 1)[0]
+    assert "--env-file" not in container.split("```", 2)[1]
+    assert "solo se il file esiste" in container
+    # introduzione: fonti, non solo Telegram
+    intro = readme.split("## Requisiti", 1)[0]
+    assert "fonti pubbliche" in intro and "pagine HTML" in intro

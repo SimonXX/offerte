@@ -473,3 +473,39 @@ configurazione viene dalla lettura della documentazione e del codice dello strum
 ### Lasciato aperto
 
 Niente di S6.
+
+## S7, copertura mancante di S0
+
+Data: 29 ottobre 2026.
+
+### Perché esiste questo commit
+
+Il prompt chiede sette commit, uno per sprint, e dice anche che «un numero è chiuso solo se esiste un test che
+lo copre». Rileggendo S0 prima della consegna, otto problemi avevano la correzione ma non il test: 7 e 12
+(tetto delle pagine nei giri incrementali), 13 e 32 (link malformato dentro `process_message`), 39 (chiavi
+`ogni`, `canale`, `pagine` nelle voci di `canali:`), 40, 41, 56 e 66 (coerenza del README). Metterli nel commit
+di S6 avrebbe mescolato due sprint, rifare la storia dei sei commit precedenti era peggio: questo commit
+contiene solo quei test, nient'altro. **Deviazione: i commit nuovi sono otto, non sette.**
+
+### Test aggiunti
+
+293 prima, **301 dopo** (+8), nessuna riga di codice di produzione toccata.
+
+| test | problema |
+|:--|:--|
+| `test_telegram_primo_giro_si_ferma_a_pagine_storico` | 12 |
+| `test_telegram_giro_incrementale_recupera_il_pregresso` (undici pagine fino a `last_id`, non tre) | 7, 12 |
+| `test_telegram_avvisa_se_le_pagine_finiscono_prima` | 7 |
+| `test_voci_di_canali_accettano_ogni_canale_pagine` | 39 |
+| `test_link_malformato_non_fa_sparire_il_messaggio` (tel:, mailto:, porta non numerica) | 13, 32 |
+| `test_load_env_prima_di_load_config` (`OFFERTE_FEED_BASE_URL` in `.env` finisce nei link dell'indice) | 60 |
+| `test_readme_elenca_tutti_i_sottocomandi` (confronto con `COMMANDS`) | 56 |
+| `test_readme_sulle_opzioni_globali_e_sul_container` | 40, 41, 66 |
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 301 passed in 36,5 s |
+| controllo trattini | nessuna riga |
+| `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |

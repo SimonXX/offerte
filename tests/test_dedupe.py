@@ -76,3 +76,16 @@ def test_ribasso_sotto_soglia_si_aggrega(tmp_path):
         a, _ = process_message(store, NoResolve(), msg("alfa", 1, "SSD 1TB\n79,99€", link), now=NOW, dedupe_since=SINCE)
         b, nuova = process_message(store, NoResolve(), msg("alfa", 2, "SSD 1TB\n77,00€", link), now=NOW, dedupe_since=SINCE)
         assert b == a and not nuova  # meno del 5% di ribasso: è lo stesso annuncio
+
+
+def test_link_malformato_non_fa_sparire_il_messaggio(tmp_path):
+    """Un tel:, un mailto: o una porta non numerica lasciano l'offerta senza link, non la cancellano."""
+    with Store(tmp_path / "db.sqlite") as store:
+        for n, link in enumerate(["tel:+390212345", "mailto:info@shop.it", "https://example.com:abc/x"], start=1):
+            offer_id, nuova = process_message(store, NoResolve(), msg("alfa", n, f"Offerta {n}\n{n}9,99€", [link]),
+                                              now=NOW, dedupe_since=SINCE)
+            assert nuova
+            o = store.get_offer(offer_id)
+            assert o.link is None and o.key.startswith("text:")
+            assert store.post_exists("alfa", n)
+        assert store.counts()["posts"] == 3
