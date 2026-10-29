@@ -1,5 +1,5 @@
 # Raccolta continua su GitHub Actions e feed pubblicati su GitHub Pages. Costo zero su repository pubblico.
-# Il giro si riavvia da solo (deploy/autoavvio.sh): la pianificazione cron di GitHub, qui, non e' mai partita.
+# La cadenza la detta .github/workflows/sveglia.yml; deploy/autoavvio.sh e' la ruota di scorta, spenta di default.
 # Stato (SQLite) su un branch orfano "data" riscritto a ogni giro, così il repository non cresce.
 name: offerte
 
@@ -58,7 +58,7 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.AUTOAVVIO_TOKEN }}
-          AUTOAVVIO_PAUSA: ${{ vars.AUTOAVVIO_PAUSA }}   # secondi di attesa prima del giro dopo; vuoto = nessuna
+          AUTOAVVIO: ${{ vars.AUTOAVVIO }}   # "on" accende il ciclo continuo; vuoto = cadenza da sveglia.yml
         run: ./deploy/autoavvio.sh
 
   pubblicazione:

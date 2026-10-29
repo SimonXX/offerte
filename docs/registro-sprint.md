@@ -864,3 +864,24 @@ La sola strada pulita è l'affiliazione: «Privé by Zalando IT» è un programm
 Awin approvato si accede al feed prodotti, che diventa una fonte `rss` o `comando` senza toccare il resto del
 codice. Richiede una registrazione e un deposito rimborsabile, quindi è una decisione dell'utente, non una cosa
 da fare di iniziativa.
+
+## Correzione: il ciclo continuo non era compliant, la cadenza passa a un workflow dedicato
+
+Il ciclo di autoavvio funzionava (il giro delle 17:13:45 è stato chiesto dal precedente, non da me), ma era
+sbagliato di disegno. Con giri da novanta secondi e cadenza di novanta secondi un runner resta occupato in
+permanenza: è la forma che i termini di GitHub nominano come esempio da non fare, *"don't use Actions as a content
+delivery network or as part of a serverless application"*, dentro la clausola sul carico sproporzionato al
+beneficio. La clausola sull'attività estranea al progetto invece non ci riguarda: qui il giro è il progetto.
+
+Peggio, la manopola che avevo aggiunto per rallentare faceva il contrario. `AUTOAVVIO_PAUSA` inseriva uno `sleep`
+dentro il passo, e uno `sleep` dentro un runner tiene la macchina allocata: con 120 secondi di pausa il ciclo di
+utilizzo saliva dal 50 al 100 per cento. La variabile è stata cancellata e la pausa tolta dallo script.
+
+Disegno nuovo: `.github/workflows/sveglia.yml`, un workflow che non fa altro che chiedere un giro di `offerte.yml`
+ogni quindici minuti e dura pochi secondi, così fra un giro e l'altro nessun runner è occupato. `autoavvio.sh`
+resta come ruota di scorta, spento salvo `gh variable set AUTOAVVIO --body on`.
+
+La sveglia è anche un esperimento di diagnosi: se il suo cron parte mentre quello di `offerte.yml` continua a non
+partire, il problema è quel file; se non parte nemmeno il suo, è la pianificazione sull'intero repository, e allora
+la strada resta un trigger esterno (un timer sulla macchina dell'utente, oppure un Cron Trigger su Cloudflare
+Workers, gratuito e nel suo account, che chiama l'API di GitHub).

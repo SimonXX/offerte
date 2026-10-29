@@ -1,0 +1,32 @@
+# L'unico compito di questo workflow e' chiedere un giro di "offerte". Dura pochi secondi, quindi
+# fra un giro e l'altro nessun runner resta occupato: e' l'uso per cui la pianificazione esiste.
+# Sta separato da offerte.yml per un motivo di diagnosi: su questo repository il cron di offerte.yml
+# non e' mai partito, e un workflow nuovo dice se il problema e' quel file o la pianificazione in se'.
+name: sveglia
+
+on:
+  schedule:
+    - cron: "4,19,34,49 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: sveglia
+  cancel-in-progress: true
+
+jobs:
+  sveglia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Chiedi un giro di offerte
+        env:
+          GH_TOKEN: ${{ secrets.AUTOAVVIO_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "sveglia: manca il secret AUTOAVVIO_TOKEN, non posso chiedere il giro"
+            exit 0
+          fi
+          gh workflow run offerte.yml --repo "$GITHUB_REPOSITORY" --ref main
+          echo "sveglia: giro richiesto"

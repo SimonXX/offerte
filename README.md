@@ -506,22 +506,30 @@ config. Per provare in locale il salvataggio dello stato:
 
 ### Ogni quanto gira
 
-La pianificazione `schedule` di GitHub è una coda, non una garanzia: il minimo dichiarato è 5 minuti, lo slittamento
-nei momenti di carico è normale e su un repository nuovo può non partire affatto per ore. Qui non è mai partita, così
-il motore è diventato un altro: l'ultimo passo del workflow (`deploy/autoavvio.sh`) chiede il giro successivo appena
-finisce il proprio. La cadenza diventa la durata di un giro, circa quattro minuti, e il cron resta solo come rete di
-sicurezza nel caso il ciclo si interrompa.
+Due workflow, con due compiti diversi. `offerte.yml` fa il giro: legge i canali, aggiorna lo stato, pubblica i feed,
+e dura un minuto e mezzo scarso quando non c'è arretrato. `sveglia.yml` non fa niente se non chiedere un giro di
+`offerte.yml`, ogni quindici minuti, e dura pochi secondi. La separazione serve a tenere i runner liberi fra un giro
+e l'altro, che è il modo in cui la pianificazione va usata.
 
 Il `GITHUB_TOKEN` del workflow non può innescare altri workflow: GitHub lo impedisce per evitare i cicli infiniti.
 Serve quindi un token personale nel secret `AUTOAVVIO_TOKEN`, a grana fine, limitato a questo repository e al solo
-permesso `Actions: read and write`. Senza quel secret lo script non fa niente e si resta al cron: **cancellare il
-secret è il modo di fermare il ciclo**. Due giri non si sovrappongono mai, per due motivi indipendenti: il gruppo
-`concurrency` li mette in fila e lo script non chiede un giro nuovo se ne vede già uno vivo.
+permesso `Actions: read and write`. Senza quel secret la sveglia suona a vuoto.
 
-Senza arretrato da smaltire un giro dura circa un minuto e mezzo, quindi il ciclo gira più o meno a quel ritmo. Per
-rallentarlo senza toccare il codice c'è la variabile `AUTOAVVIO_PAUSA`, secondi di attesa prima di chiedere il giro
-successivo: `gh variable set AUTOAVVIO_PAUSA --body 180` porta la cadenza a circa cinque minuti,
-`gh variable delete AUTOAVVIO_PAUSA` la riporta al massimo.
+**Perché non un ciclo continuo.** Il primo tentativo è stato far chiedere a ogni giro quello successivo
+(`deploy/autoavvio.sh`): la cadenza scende a un minuto e mezzo, ma un runner resta occupato in permanenza, e i
+termini di GitHub chiedono che il carico sia proporzionato al beneficio, citando proprio le applicazioni sempre
+accese come esempio da non fare. Lo script è rimasto come ruota di scorta ed è spento di default; si accende con
+`gh variable set AUTOAVVIO --body on` e si spegne con `gh variable delete AUTOAVVIO`. Rallentarlo con una pausa non
+avrebbe aiutato: `sleep` gira dentro il runner, quindi tiene la macchina occupata mentre aspetta.
+
+**Forzare un giro subito.** Dal terminale:
+
+```sh
+gh workflow run offerte.yml --repo <utente>/<repo> --ref main
+```
+
+Dal telefono, con l'app GitHub: Actions, workflow `offerte`, `Run workflow`. In entrambi i casi la pagina è
+aggiornata in un paio di minuti.
 
 ## Container
 
