@@ -19,26 +19,29 @@ parametri:
 canali:
   # Verificati il 28.10.2026: anteprima pubblica attiva e post recenti. Volume indicativo in messaggi al giorno.
   # informatica: PC, componenti, gadget tech
-  - {nome: mttvideo,            cartella: informatica}   # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
-  - {nome: mttgadgets,          cartella: informatica}   # MoreThanGadgets - Offerte Tech, 19,5K, ~6/g
-  - {nome: prophecytechofferte, cartella: informatica}   # Prophecy Tech - Offerte, ~10/g
-  - {nome: prodigeekofferte,    cartella: informatica}   # Prodigeek Offerte, ~8/g
-  - {nome: prezzitech,          cartella: informatica}   # Prezzi.Tech (TuttoAndroid), 62,3K, ~15/g, link bit.ly
-  - {nome: offertesmartworld,   cartella: informatica}   # SmartWorld.it Offerte Tecnologia, 51,1K, ~12/g, link x.gd
-  - {nome: offertepuntotech,    cartella: informatica}   # offerte.tech by Andrea Galeazzi, 184K, ~40/g
-  - {nome: vereoffertetech,     cartella: informatica}   # Hardware&Offerte, 58,5K, ~15/g (anche video YouTube)
-  - {nome: mvofferte,           cartella: informatica}   # MVHardware Offerte, 9,85K, ~4/g
-  - {nome: offerten1tech,       cartella: informatica}   # offertenumberone.it, 4,7K, ~15/g
+  - {nome: mttvideo,            cartella: informatica}               # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
+  - {nome: mttgadgets,          cartella: informatica}               # MoreThanGadgets - Offerte Tech, 19,5K, ~6/g
+  - {nome: prophecytechofferte, cartella: informatica}               # Prophecy Tech - Offerte, ~10/g
+  - {nome: prodigeekofferte,    cartella: informatica}               # Prodigeek Offerte, ~8/g
+  - {nome: prezzitech,          cartella: informatica}               # Prezzi.Tech (TuttoAndroid), 62,3K, ~15/g, link bit.ly
+  - {nome: offertesmartworld,   cartella: informatica}               # SmartWorld.it Offerte Tecnologia, 51,1K, ~12/g, link x.gd
+  - {nome: offertepuntotech,    cartella: informatica, pagine: 15}   # offerte.tech by Andrea Galeazzi, 184K, ~40/g
+  - {nome: vereoffertetech,     cartella: informatica}               # Hardware&Offerte, 58,5K, ~15/g (anche video YouTube)
+  - {nome: mvofferte,           cartella: informatica}               # MVHardware Offerte, 9,85K, ~4/g
+  - {nome: offerten1tech,       cartella: informatica}               # offertenumberone.it, 4,7K, ~15/g
+  - {nome: offertetecnomela,    cartella: informatica}               # Offerte e Sconti Mela (Apple), ~12/g
   # casa: errori di prezzo e offerte generaliste
-  - {nome: erroridiprezzo,              cartella: casa}  # Errori di Prezzo, ~5/g
-  - {nome: erroridiprezzo_offertedalweb, cartella: casa} # Errore di Prezzo - Offerte Dal Web, ~1/g
-  - {nome: mttcasa,                     cartella: casa}  # MoreThanTech - Offerte Casa, 6,94K, ~13/g
+  - {nome: erroridiprezzo,              cartella: casa}              # Errori di Prezzo, ~5/g
+  - {nome: erroridiprezzo_offertedalweb, cartella: casa}             # Errore di Prezzo - Offerte Dal Web, ~1/g
+  - {nome: mttcasa,                     cartella: casa}              # MoreThanTech - Offerte Casa, 6,94K, ~13/g
+  - {nome: offertecasatecno,            cartella: casa}              # Offerte casa, ~34/g
   # cina: AliExpress e simili
-  - {nome: mttcina,             cartella: cina}          # MoreThanTech - Offerte Cina, 15,1K, ~2/g, link s.click.aliexpress.com
+  - {nome: mttcina,             cartella: cina}                      # MoreThanTech - Offerte Cina, 15,1K, ~2/g, link s.click.aliexpress.com
+  - {nome: tecnocina,           cartella: cina, pagine: 25}          # Offerte e Sconti Cina, ~150/g
   # raffica: canali ad alto volume (decine o centinaia di post al giorno), tenuti in una cartella a parte
-  - {nome: rafficaffari,        cartella: raffica}       # RafficAffari, Offerte Bomba ed Errori di Prezzo, ~80/g
-  - {nome: tecnofferte,         cartella: raffica}       # Offerte e Sconti Gratis, 62,7K, ~100/g
-  - {nome: codiciscontotech,    cartella: raffica}       # Codici sconto e offerte gratis, 45,6K, ~100/g
+  - {nome: rafficaffari,        cartella: raffica, pagine: 25}       # RafficAffari, Offerte Bomba ed Errori di Prezzo, ~80/g
+  - {nome: tecnofferte,         cartella: raffica, pagine: 25}       # Offerte e Sconti Gratis, 62,7K, ~100/g
+  - {nome: codiciscontotech,    cartella: raffica, pagine: 25}       # Codici sconto e offerte gratis, 45,6K, ~100/g
 
 # Fonti diverse da Telegram (tipi: rss, html, comando, apify, oppure una classe esterna "modulo:Classe").
 # Decommenta e adatta. `ogni` = minuti fra una lettura e l'altra (obbligatorio per apify).

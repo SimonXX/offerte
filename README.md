@@ -32,7 +32,7 @@ poi in `./config.yaml`; i percorsi relativi nella config partono dalla cartella 
 
 ## Configurazione
 
-Estratto di `config.yaml`, copiato dal file del repository, che ha 17 canali verificati divisi in
+Estratto di `config.yaml`, copiato dal file del repository, che ha 20 canali verificati divisi in
 `informatica`, `casa`, `cina` e `raffica`:
 
 ```yaml
@@ -53,9 +53,9 @@ parametri:
   # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
 
 canali:
-  - {nome: mttvideo,            cartella: informatica}   # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
-  - {nome: erroridiprezzo,              cartella: casa}  # Errori di Prezzo, ~5/g
-  - {nome: rafficaffari,        cartella: raffica}       # RafficAffari, Offerte Bomba ed Errori di Prezzo, ~80/g
+  - {nome: mttvideo,            cartella: informatica}               # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
+  - {nome: erroridiprezzo,              cartella: casa}              # Errori di Prezzo, ~5/g
+  - {nome: rafficaffari,        cartella: raffica, pagine: 25}       # RafficAffari, Offerte Bomba ed Errori di Prezzo, ~80/g
 
 regole:
   - nome: ssd-sotto-60
