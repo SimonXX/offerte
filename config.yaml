@@ -66,6 +66,25 @@ fonti: []
 #    modo: ultimo              # legge l'ultima esecuzione riuscita pianificata su Apify; "sync" la lancia ora
 #    campi: {titolo: title, link: url, prezzo: price, prezzo_barrato: listPrice, immagine: image, id: asin}
 #    ogni: 180                 # token in .env: APIFY_TOKEN
+#
+# Strumenti locali come fonti (vedi "Fonti pronte" nel README). Girano su 127.0.0.1, che GitHub Actions non
+# raggiunge: vanno in config.locale.yaml, non tracciato, selezionato con -c o OFFERTE_CONFIG.
+#  - nome: cdio-negozi          # changedetection.io, feed per tag
+#    tipo: rss
+#    cartella: informatica
+#    url_env: CDIO_FEED         # http://127.0.0.1:5000/rss/tag/<uuid>?token=<rss_access_token>
+#    ogni: 30
+#  - nome: rssbridge-sito       # RSS-Bridge, solo per siti senza feed che la fonte html non copre
+#    tipo: rss
+#    cartella: casa
+#    url: http://127.0.0.1:3000/?action=display&bridge=<NomeBridge>&format=Atom
+#    ogni: 60
+#  - nome: newsletter-coupon    # kill-the-newsletter, coupon riservati agli iscritti
+#    tipo: rss
+#    cartella: casa
+#    url_env: KTN_FEED          # l'id del feed è anche l'indirizzo email: non va in un file tracciato
+#    scarta_host: kill-the-newsletter.com
+#    ogni: 60
 
 regole:
   - nome: ssd-sotto-60

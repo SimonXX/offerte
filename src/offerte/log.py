@@ -22,6 +22,4 @@ def setup_logging(var_dir: Path, verbose: bool = False) -> None:
     for h in handlers:
         h.setFormatter(fmt)
         root.addHandler(h)
-    # httpx logga ogni richiesta con l'URL completo: a livello INFO sarebbe rumore (e nel caso del bot, il token).
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    # Il silenzio di httpx e httpcore lo impone offerte.http all'import: l'URL completo contiene i token.

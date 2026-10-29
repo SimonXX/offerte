@@ -401,3 +401,75 @@ Nessuna.
 ### Lasciato aperto
 
 S6: le due opzioni della fonte `rss`, `config.locale.yaml` e la sezione «Fonti pronte» del README.
+
+## S6, fonti pronte
+
+Data: 29 ottobre 2026.
+
+### Cosa è stato fatto
+
+Fonte `rss`, due opzioni nuove, entrambe in `chiavi`:
+
+- `url_env: NOME` legge l'URL da `os.environ[NOME]` a ogni fetch, non in `configura`. Se la variabile manca si
+  solleva `FetchError`, che ferma quella fonte e non il giro. `url` e `url_env` si escludono a vicenda e uno dei
+  due è obbligatorio (`ConfigError`).
+- `scarta_host: host` toglie da `links` i link verso quell'host e i suoi sottodomini, lascia vuoto il permalink
+  che punta lì e, in più rispetto alla specifica, azzera anche l'immagine che punta lì: sarebbe finita
+  nell'`enclosure` del feed con dentro l'identificativo.
+
+`Client.get(url, nome=None)`: i log di riprova e i `FetchError` mostrano il `nome` se passato, altrimenti
+l'URL senza query (`scheme://host/path`, con le credenziali tolte). `RssSource.fetch` passa `nome=self.nome`
+quando l'URL viene da `url_env`.
+
+`config.locale.yaml` in `.gitignore`; i tre blocchi `fonti:` commentati in `config.yaml`; sezione «Fonti pronte»
+nel README con, per ciascuno strumento, cosa fa, quando non usarlo, il comando `podman run`, la configurazione
+minima per ottenere un feed e il blocco `fonti:` pronto, più la riga `Environment=OFFERTE_CONFIG=...` per
+`systemd/offerte-fetch.service`.
+
+### Un difetto trovato scrivendo il test
+
+Il test chiesto dal prompt («né `caplog.text` né `channels.last_error` contengono SEGRETO») falliva: le nostre
+righe erano pulite, ma `httpx` logga ogni richiesta con l'URL completo a livello INFO. Il silenziamento esisteva
+già, in `log.py`, quindi valeva solo per chi passa dalla riga di comando. È stato spostato in `http.py`, dove
+nasce la perdita e dove vale per chiunque costruisca un `Client`; `log.py` conserva una riga di commento che
+rimanda lì.
+
+### Test
+
+286 prima, **293 dopo** (+7), tutti in `tests/test_sources.py`: `url_env` che legge la variabile e che solleva
+quando manca, esclusività di `url` e `url_env` nei due versi, `scarta_host` su link, permalink e immagine,
+l'identificativo del feed assente da ogni file di `var/feeds/` dopo un giro completo, il token fuori dai log e
+da `channels.last_error`, e `etichetta()` sui tre casi (con nome, senza nome, con credenziali nell'URL).
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 293 passed in 36,6 s |
+| controllo trattini | nessuna riga |
+| `uv run offerte --help` | ok |
+| `uv run offerte -c /tmp/offerte-prova/config.yaml fetch --storico 1 --senza-notifiche` | 17 fonti su 17 ok, 20 post nuovi, 19 offerte nuove |
+| `ls -l var` e conteggio offerte del repository | mtime invariati, 0 offerte |
+
+### Misure finali su dati reali
+
+`dashboard.json` con 275 offerte nella finestra di 14 giorni: 278.577 byte in chiaro, 129.434 byte con
+`gzip -9`, cioè 1.013 byte per offerta. I numeri nel README sono questi.
+
+### Prova dal vivo di changedetection.io
+
+**Prova reale non eseguita.** Richiede un container con volume e un cambio di prezzo vero su una pagina seguita,
+che in questa sessione non era osservabile. La sezione del README è segnata «non provata» e dichiara che la
+configurazione viene dalla lettura della documentazione e del codice dello strumento.
+
+### Deviazioni
+
+- `scarta_host` filtra anche l'immagine, non solo link e permalink: senza, l'URL del pixel di tracciamento di
+  kill-the-newsletter sarebbe finito nell'`enclosure` del feed pubblico, e il test sull'identificativo assente
+  da `var/feeds/` sarebbe fallito.
+- Il silenziamento dei logger `httpx` e `httpcore` si è spostato da `log.py` a `http.py`, per la ragione scritta
+  sopra.
+
+### Lasciato aperto
+
+Niente di S6.

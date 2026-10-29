@@ -272,3 +272,92 @@ def test_parse_date_non_solleva_mai(valore):
 ])
 def test_to_number_rifiuta_i_non_numeri(valore, atteso):
     assert to_number(valore) == atteso
+
+
+ATOM_PRIVATO = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Newsletter</title>
+<entry><title>Coupon riservato agli iscritti</title>
+<link rel="alternate" href="https://kill-the-newsletter.com/feeds/SEGRETO123/entries/9.html"/>
+<id>urn:9</id><updated>2026-10-27T09:30:00Z</updated>
+<content type="html">&lt;p&gt;Sconto del 30% con il codice ISCRITTI30, 19,99 euro&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://shop.example.com/p/42"&gt;Vai&lt;/a&gt;&lt;/p&gt;
+&lt;img src="https://kill-the-newsletter.com/feeds/SEGRETO123/pixel.png"&gt;</content></entry></feed>"""
+
+
+def test_rss_url_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("FEED_PRIVATO", "https://kill-the-newsletter.com/feeds/SEGRETO123/entries.xml")
+    fonte = crea_fonte({"nome": "newsletter", "tipo": "rss", "cartella": "casa", "url_env": "FEED_PRIVATO"})
+    chiamate = []
+
+    def handler(request):
+        chiamate.append(str(request.url))
+        return httpx.Response(200, content=ATOM_PRIVATO)
+
+    (m,) = fonte.fetch(ctx(tmp_path, httpx.MockTransport(handler))).items
+    assert chiamate == ["https://kill-the-newsletter.com/feeds/SEGRETO123/entries.xml"]
+    assert m.text.startswith("Coupon riservato agli iscritti")
+
+    monkeypatch.delenv("FEED_PRIVATO")
+    with pytest.raises(FetchError, match="FEED_PRIVATO non è impostata"):
+        fonte.fetch(ctx(tmp_path))
+
+
+@pytest.mark.parametrize("opzioni", [{}, {"url": "https://e.com/f.xml", "url_env": "X"}])
+def test_rss_url_e_url_env_esclusivi(opzioni):
+    with pytest.raises(ConfigError, match="'url' oppure 'url_env'"):
+        crea_fonte({"nome": "x", "tipo": "rss", **opzioni})
+
+
+def test_rss_scarta_host(tmp_path, monkeypatch):
+    monkeypatch.setenv("FEED_PRIVATO", "https://kill-the-newsletter.com/feeds/SEGRETO123/entries.xml")
+    fonte = crea_fonte({"nome": "newsletter", "tipo": "rss", "cartella": "casa", "url_env": "FEED_PRIVATO",
+                        "scarta_host": "kill-the-newsletter.com"})
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, content=ATOM_PRIVATO))
+    (m,) = fonte.fetch(ctx(tmp_path, transport)).items
+    assert m.links == ["https://shop.example.com/p/42"]
+    assert m.permalink == "" and m.image is None
+
+
+def test_url_del_feed_privato_non_finisce_nei_feed(tmp_path, monkeypatch):
+    monkeypatch.setenv("FEED_PRIVATO", "https://kill-the-newsletter.com/feeds/SEGRETO123/entries.xml")
+    cfg = {
+        "parametri": {"intervallo_cortesia": 0, "var_dir": str(tmp_path / "var")},
+        "fonti": [{"nome": "newsletter", "tipo": "rss", "cartella": "casa", "url_env": "FEED_PRIVATO",
+                   "scarta_host": "kill-the-newsletter.com"}],
+        "regole": [{"nome": "coupon", "parole": ["coupon"]}],
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    config = load_config(tmp_path / "config.yaml")
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, content=ATOM_PRIVATO))
+    with Store(tmp_path / "var" / "offerte.sqlite") as store:
+        client = Client("ua", courtesy=0, transport=transport, sleep=lambda s: None)
+        s = run_fetch(config, store, client, None, now=NOW)
+    assert s.ok == ["newsletter"] and len(s.new_offers) == 1
+    for percorso in (tmp_path / "var" / "feeds").rglob("*"):
+        if percorso.is_file():
+            assert "SEGRETO123" not in percorso.read_text(encoding="utf-8"), percorso.name
+
+
+def test_token_del_feed_fuori_dai_log(tmp_path, monkeypatch, caplog):
+    monkeypatch.setenv("FEED_PRIVATO", "https://privato.example/rss?token=SEGRETO123")
+    cfg = {
+        "parametri": {"intervallo_cortesia": 0, "var_dir": str(tmp_path / "var")},
+        "fonti": [{"nome": "newsletter", "tipo": "rss", "cartella": "casa", "url_env": "FEED_PRIVATO"}],
+        "regole": [{"nome": "coupon", "parole": ["coupon"]}],
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    config = load_config(tmp_path / "config.yaml")
+    transport = httpx.MockTransport(lambda r: httpx.Response(429))
+    with Store(tmp_path / "var" / "offerte.sqlite") as store, caplog.at_level("DEBUG"):
+        client = Client("ua", courtesy=0, max_retries=2, transport=transport, sleep=lambda s: None)
+        s = run_fetch(config, store, client, None, now=NOW)
+        errore = store.channel_state("newsletter").last_error or ""
+    assert list(s.failed) == ["newsletter"]
+    assert "SEGRETO123" not in caplog.text
+    assert "SEGRETO123" not in errore and "newsletter" in errore
+
+
+def test_etichetta_senza_query():
+    from offerte.http import etichetta
+    assert etichetta("https://privato.example/rss?token=X") == "https://privato.example/rss"
+    assert etichetta("https://privato.example/rss?token=X", "fonte") == "fonte"
+    assert etichetta("https://utente:password@host.example:8443/a?b=1") == "https://host.example:8443/a"

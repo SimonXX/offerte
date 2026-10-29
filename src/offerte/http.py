@@ -7,16 +7,39 @@ import time
 from collections.abc import Callable
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from urllib.parse import urlsplit
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+# httpx logga ogni richiesta con l'URL completo, query compresa: per un feed privato quello è il token.
+# Sta qui e non in log.py perché vale per chiunque usi il client, non solo per la riga di comando.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 RETRY_STATUS = {429, 500, 502, 503, 504}
 # Errori che non cambieranno al tentativo dopo: ritentarli regala solo 30 secondi di attesa.
 NON_RITENTABILI = (httpx.UnsupportedProtocol, httpx.TooManyRedirects, httpx.DecodingError)
 ATTESA_MASSIMA = 120.0  # tetto di una singola attesa
 BUDGET_ATTESA = 60.0    # tetto del tempo speso ad aspettare in una sola chiamata
+
+
+def etichetta(url: str, nome: str | None = None) -> str:
+    """Come si nomina una richiesta nei log: il nome della fonte, oppure l'URL senza query.
+
+    La query di un feed privato contiene il token: non deve finire nei log né in channels.last_error.
+    """
+    if nome:
+        return nome
+    try:
+        parti = urlsplit(url)
+    except ValueError:
+        return "url non valido"
+    host = parti.hostname or ""
+    if parti.port:
+        host = f"{host}:{parti.port}"
+    return f"{parti.scheme}://{host}{parti.path}" if host else "url non valido"
 
 
 def _retry_after(valore: str) -> float | None:
@@ -76,8 +99,12 @@ class Client:
     def __exit__(self, *exc) -> None:
         self.close()
 
-    def get(self, url: str) -> httpx.Response:
-        """GET con intervallo di cortesia e backoff esponenziale; FetchError quando i tentativi finiscono."""
+    def get(self, url: str, nome: str | None = None) -> httpx.Response:
+        """GET con intervallo di cortesia e backoff esponenziale; FetchError quando i tentativi finiscono.
+
+        `nome` sostituisce l'URL nei messaggi: serve alle fonti il cui URL contiene un token.
+        """
+        visibile = etichetta(url, nome)
         delay = 2.0
         errore = ""
         speso = 0.0
@@ -86,14 +113,14 @@ class Client:
             try:
                 resp = self._client.get(url)
             except NON_RITENTABILI as e:
-                raise FetchError(f"{url}: {type(e).__name__}") from None
+                raise FetchError(f"{visibile}: {type(e).__name__}") from None
             except httpx.HTTPError as e:
                 errore = f"{type(e).__name__}: {e}"
             else:
                 if resp.status_code < 400:
                     return resp
                 if resp.status_code not in RETRY_STATUS:
-                    raise FetchError(f"HTTP {resp.status_code} per {url}")
+                    raise FetchError(f"HTTP {resp.status_code} per {visibile}")
                 errore = f"HTTP {resp.status_code}"
                 indicata = _retry_after(resp.headers.get("Retry-After", ""))
                 if indicata is not None:
@@ -102,12 +129,12 @@ class Client:
                 attesa = min(delay, ATTESA_MASSIMA)
                 if speso + attesa > BUDGET_ATTESA:
                     # Un canale in 429 persistente terrebbe fermo tutto il giro oltre il TimeoutStartSec dell'unit.
-                    raise FetchError(f"{url}: {errore}, attesa richiesta oltre il budget di {BUDGET_ATTESA:.0f} s")
-                log.warning("%s: %s, riprovo fra %.0f s", url, errore, attesa)
+                    raise FetchError(f"{visibile}: {errore}, attesa richiesta oltre il budget di {BUDGET_ATTESA:.0f} s")
+                log.warning("%s: %s, riprovo fra %.0f s", visibile, errore, attesa)
                 self._sleep(attesa)
                 speso += attesa
                 delay *= 2
-        raise FetchError(f"{url}: {errore} dopo {self.max_retries + 1} tentativi")
+        raise FetchError(f"{visibile}: {errore} dopo {self.max_retries + 1} tentativi")
 
     def _wait(self) -> None:
         if self._last is not None:
@@ -125,5 +152,5 @@ class Client:
                     return str(resp.url)
             return str(resp.url)
         except httpx.HTTPError as e:
-            log.debug("redirect non risolto per %s: %s", url, type(e).__name__)
+            log.debug("redirect non risolto per %s: %s", etichetta(url), type(e).__name__)
             return url

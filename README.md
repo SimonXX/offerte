@@ -95,7 +95,7 @@ estrazione prezzi, dedupe, regole, feed e notifiche, è lo stesso per tutte.
 | tipo | opzioni | cosa fa |
 |:--|:--|:--|
 | `telegram` | `canale` (default: il nome), `pagine` | anteprima pubblica `t.me/s/<canale>`, incrementale per id |
-| `rss` | `url`, `massimo` | RSS 2.0 o Atom; testo, link, immagine e prezzi barrati dalla descrizione |
+| `rss` | `url`, `url_env`, `massimo`, `scarta_host` | RSS 2.0, RSS 1.0 o Atom; testo, link, immagine e prezzi barrati dalla descrizione |
 | `html` | `url`, `elemento`, `campi`, `massimo` | una pagina, un selettore CSS per ogni offerta, selettori per i campi (`css`, `css@attr`, `@attr`) |
 | `comando` | `comando`, `cwd`, `timeout` | esegue uno script qualsiasi che stampa record JSON (una riga per record o un array) |
 | `apify` | `actor`, `modo`, `input`, `campi`, `token`, `timeout`, `massimo`, `memoria` | actor dello store Apify via REST; `modo: sync` lo lancia, `modo: ultimo` legge l'ultima esecuzione riuscita |
@@ -113,6 +113,120 @@ credito a ogni giro. Uno script per `comando`, in qualunque linguaggio, riceve l
 
 `offerte prova <fonte>` esegue una fonte senza salvare e mostra cosa produce; `offerte fonti` elenca stato e ultimo
 fetch di tutte. Esempi di configurazione per ogni tipo sono commentati in `config.yaml`.
+
+### Fonti pronte
+
+Tre strumenti open source che producono un feed RSS o Atom e che la fonte `rss` legge senza scrivere codice.
+Girano in locale su `127.0.0.1`, che GitHub Actions non raggiunge: le loro voci vanno in `config.locale.yaml`,
+non tracciato (`.gitignore`), scelto con `-c` oppure con `OFFERTE_CONFIG`.
+
+```sh
+uv run offerte -c config.locale.yaml fetch
+```
+
+Per il servizio systemd basta una riga in `systemd/offerte-fetch.service`:
+
+```ini
+[Service]
+Environment=OFFERTE_CONFIG=@PROJECT_DIR@/config.locale.yaml
+```
+
+`config.locale.yaml` contiene solo le fonti locali e regole **senza** `notify`: le notifiche restano in una sola
+installazione, quella su Actions, altrimenti ogni offerta arriva due volte. Gli stessi blocchi stanno commentati
+in `config.yaml`.
+
+La fonte `rss` ha due opzioni pensate per questi strumenti. `url_env: NOME` legge l'URL del feed da una variabile
+d'ambiente a ogni giro, invece che dalla config: serve quando l'URL contiene un token, e i log e gli errori
+mostrano il nome della fonte al posto dell'URL. `scarta_host: esempio.it` toglia dai link dell'offerta quelli
+verso quell'host e i suoi sottodomini, e lascia vuoto il permalink che punta lì: serve quando l'indirizzo dello
+strumento è esso stesso il segreto. `url` e `url_env` si escludono a vicenda e uno dei due è obbligatorio.
+
+#### changedetection.io, prezzi di pagine prodotto
+
+**Non provata dal vivo**: la verifica richiede un cambio di prezzo reale su una pagina seguita, che in questa
+sessione non è stato possibile osservare. La configurazione qui sotto viene dalla lettura della documentazione e
+del codice dello strumento, non da un giro completo.
+
+Serve per le pagine prodotto di negozi che espongono JSON-LD, OpenGraph o microdata, una per watch. Non serve per
+Amazon.it: il plugin Amazon è deprecato dal 2024-08 e la pagina non espone JSON-LD. Non serve per i siti che hanno
+già un feed, né per quelli che la fonte `html` copre con un selettore CSS.
+
+```sh
+podman run -d --name changedetection -p 127.0.0.1:5000:5000 -v changedetection-data:/datastore \
+  ghcr.io/dgtlmoon/changedetection.io
+```
+
+Nello strumento: per ogni prodotto un watch di tipo «Re-stock & Price detection for single product pages», tutti
+con il tag `offerte`; per «avvisami sotto X» si imposta solo il minimo, perché un prezzo dentro l'intervallo
+minimo-massimo viene soppresso. In Settings, RSS, `rss_template_override` deve mettere il prezzo seguito da `€`,
+altrimenti l'estrattore non lo riconosce (il testo predefinito, «In Stock: True - Price: 12.99», non ha valuta):
+
+```
+{{watch_label}}
+{{restock.price}} €{% if restock.previous_price %} invece di {{restock.previous_price}} €{% endif %}
+{{watch_open_url}}
+```
+
+Si usa il feed per tag, non quello per singolo watch: quello per watch risponde 400 finché ci sono meno di due
+istantanee. L'URL sta in una variabile perché contiene il token:
+
+```sh
+export CDIO_FEED="http://127.0.0.1:5000/rss/tag/<uuid-del-tag-offerte>?token=<rss_access_token>"
+```
+
+```yaml
+fonti:
+  - nome: cdio-negozi
+    tipo: rss
+    cartella: informatica
+    url_env: CDIO_FEED
+    ogni: 30
+```
+
+#### RSS-Bridge, siti senza feed
+
+Serve solo per un sito italiano senza feed che la fonte `html` non copre, per esempio perché i dati sono in un
+JSON incorporato o servono espressioni XPath. Non va usato per Amazon.it (prezzo vuoto sui domini nazionali), per
+eBay (403), per Idealo.it né per Pepper, chiuso nel 2025. Va chiesto il formato Atom o Mrss, non Json, che è
+JSON Feed e la fonte `rss` non lo legge. `ogni: 60` rispetta la cache dei bridge; il timeout predefinito è di tre
+secondi e va alzato per i siti lenti.
+
+```sh
+podman run -d --name rss-bridge -p 127.0.0.1:3000:80 docker.io/rssbridge/rss-bridge:latest
+```
+
+```yaml
+fonti:
+  - nome: rssbridge-sito
+    tipo: rss
+    cartella: casa
+    url: http://127.0.0.1:3000/?action=display&bridge=<NomeBridge>&format=Atom
+    ogni: 60
+```
+
+#### kill-the-newsletter, coupon riservati agli iscritti
+
+Serve per le newsletter dei negozi, quando il coupon arriva solo per posta. Il servizio ospitato
+(`kill-the-newsletter.com`) trasforma un indirizzo email in un feed Atom. Non serve per nient'altro: il tetto è di
+512 KiB per feed e le voci oltre il mese si cancellano.
+
+L'identificativo del feed coincide con la parte locale dell'indirizzo email e compare nei link di ogni voce,
+quindi finirebbe nei feed pubblicati su Pages: per questo `url_env` lo tiene fuori dalla config e `scarta_host` lo
+toglie dai link delle offerte.
+
+```sh
+export KTN_FEED="https://kill-the-newsletter.com/feeds/<identificativo>/entries.xml"
+```
+
+```yaml
+fonti:
+  - nome: newsletter-coupon
+    tipo: rss
+    cartella: casa
+    url_env: KTN_FEED
+    scarta_host: kill-the-newsletter.com
+    ogni: 60
+```
 
 ## Comandi
 
@@ -203,10 +317,10 @@ anche nome, parole, esclusioni e soglie di ogni regola. Su GitHub Pages quel fil
 l'URL del repository lo legge. Se una regola contiene qualcosa che non vuoi pubblicare, metti `dashboard_regole:
 false`; se non vuoi pubblicare il corpus, `dashboard: false`.
 
-Dimensioni misurate il 29.10.2026 su un giro reale di 17 canali: 256 offerte in 14 giorni fanno 261 KB in chiaro e
-121 KB compressi, cioè circa 1.020 byte per offerta (il 37% è l'URL dell'immagine, firmato e incomprimibile). La
-proiezione a regime, 5.000-6.500 offerte, è 5-6,5 MB in chiaro e 2,5-3 MB compressi: Pages comprime i `.json`, il
-server locale no.
+Dimensioni misurate il 29.10.2026 su un giro reale di 17 canali: 275 offerte in 14 giorni fanno 279 KB in chiaro e
+129 KB compressi, cioè circa 1.010 byte per offerta (buona parte è l'URL dell'immagine, firmato e incomprimibile).
+La proiezione a regime, 5.000-6.500 offerte, è 5-6,5 MB in chiaro e 2,5-3 MB compressi: Pages comprime i `.json`,
+il server locale no.
 
 ### Miniflux
 

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from urllib.parse import urlsplit
 
+from ..config import ConfigError
 from ..dedupe import text_key
 from ..http import FetchError
 from ..parser import Message, fragment
@@ -90,14 +93,47 @@ def parse_feed(data: bytes, source: str, now: datetime, limit: int = 50) -> list
     return messages
 
 
+def _appartiene(url: str, host: str) -> bool:
+    """Vero se l'URL punta a quell'host o a un suo sottodominio."""
+    try:
+        h = (urlsplit(url).hostname or "").lower()
+    except ValueError:
+        return False
+    return h == host or h.endswith("." + host)
+
+
 @registra
 class RssSource(Source):
     tipo = "rss"
-    chiavi = frozenset({"url", "massimo"})
+    chiavi = frozenset({"url", "url_env", "massimo", "scarta_host"})
 
     def configura(self) -> None:
-        self.url = url_con_schema(self, str(self.opzione("url", obbligatoria=True)))
+        url = self.opzione("url")
+        self.url_env = self.opzione("url_env")
+        if bool(url) == bool(self.url_env):
+            raise ConfigError(f"fonte '{self.nome}' (rss): serve 'url' oppure 'url_env', non entrambi")
+        self.url = url_con_schema(self, str(url)) if url else None
+        self.scarta_host = str(self.opzione("scarta_host") or "").strip().lower().lstrip(".") or None
+
+    def indirizzo(self) -> str:
+        """L'URL del feed. Con `url_env` si rilegge a ogni giro, così il token non sta in config."""
+        if self.url:
+            return self.url
+        valore = os.environ.get(str(self.url_env), "")
+        if not valore.strip():
+            raise FetchError(f"fonte '{self.nome}' (rss): la variabile {self.url_env} non è impostata")
+        return valore.strip()
 
     def fetch(self, ctx: FetchContext) -> FetchResult:
-        resp = ctx.client.get(self.url)
-        return FetchResult(parse_feed(resp.content, self.nome, ctx.now, int(self.opzione("massimo") or 50)))
+        url = self.indirizzo()
+        resp = ctx.client.get(url, nome=self.nome if self.url_env else None)
+        items = parse_feed(resp.content, self.nome, ctx.now, int(self.opzione("massimo") or 50))
+        if self.scarta_host:
+            # L'identificativo di un feed privato sta nei suoi link: non deve finire nei feed pubblicati.
+            for m in items:
+                m.links = [u for u in m.links if not _appartiene(u, self.scarta_host)]
+                if m.permalink and _appartiene(m.permalink, self.scarta_host):
+                    m.permalink = ""
+                if m.image and _appartiene(m.image, self.scarta_host):
+                    m.image = None
+        return FetchResult(items)
