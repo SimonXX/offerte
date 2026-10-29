@@ -767,3 +767,48 @@ sorgente.
 | `uv run pytest -q` | 315 passed in 35,5 s |
 | Chrome sulla dashboard con dati di un'ora fa | «Raccolta ferma da 1 h, nessuna fonte in errore», zero punti di avviso |
 | `gh run list` | una sola esecuzione da push, cron non ancora agganciato |
+
+## S13, mandarsi un'offerta in chat
+
+Data: 29 ottobre 2026.
+
+### Il vincolo
+
+La pagina è statica e, su Pages, pubblica. Mandare un messaggio con l'API del bot richiederebbe il token dentro
+la pagina, cioè pubblicarlo: escluso. Si usa invece il selettore di condivisione di Telegram
+(`t.me/share/url?url=...&text=...`), che è un semplice link: apre l'app, l'utente sceglie la chat, nessuna
+credenziale in giro.
+
+### Cosa è stato fatto
+
+Parametro `condividi_url` (vuoto = funzione spenta), esposto nel campo di testa `condividi` di
+`dashboard.json`. Ogni scheda con un link utilizzabile mostra «Mandamelo in chat» con nome, prezzo, sconto e
+coupon nel testo e il link dell'offerta nel parametro `url`. Come per il grafico, l'indirizzo sta nei dati e non
+nel sorgente JavaScript, così il controllo A27 resta valido.
+
+### Test
+
+315 prima, **317 dopo** (+2): campo `condividi` presente e assente nella testa, e controllo che in
+`dashboard.js` non compaiano `api.telegram.org`, `sendMessage` né riferimenti al token.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 317 passed in 35,7 s |
+| Chrome su `?q=ssd&pmax=100` | 9 schede, 9 pulsanti |
+| codifica dell'href | `%26` per la `&` interna all'URL Amazon: Telegram riceve il link intero |
+
+## Nota: giro profondo concluso
+
+25.912 post letti, 17.053 offerte nuove, **16.810 in archivio** dal 31 luglio al 29 ottobre, database di 27 MB.
+Le regole hanno registrato 13 corrispondenze per `ssd-sotto-60`, 36 per `apple-watch-sotto-250` e 347 per
+`errori-di-prezzo`. La ricerca di `oura`, che prima non dava nulla, trova ora le quattro pubblicazioni dell'Oura
+Ring 4 del primo e del cinque ottobre.
+
+**Lo storico profondo resta in locale e non viene travasato sul cloud.** Il motivo è che non servirebbe: online
+`dashboard_giorni` non è impostato, quindi la finestra della pagina è quella dei feed, 14 giorni, e tre mesi di
+storico resterebbero invisibili. In compenso sovrascrivere il branch `data` cancellerebbe le righe di
+`notifications` scritte da Actions, con il rischio di rinotificare le offerte delle ultime 24 ore. Se un domani
+servisse davvero, il travaso va fatto riportando prima quelle righe nel database locale abbinandole per `key`,
+perché gli id delle offerte nei due database sono indipendenti.

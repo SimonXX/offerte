@@ -64,6 +64,8 @@ class Params:
     dashboard_giorni: int | None = None  # finestra della dashboard; assente = quella dei feed
     # Grafico dello storico prezzi, caricato dal browser solo quando apri la scheda. Vuoto = niente grafico.
     grafico_prezzi: str = "https://graph.keepa.com/pricehistory.png?domain=it&range=365&asin="
+    # Base del link "mandamelo in chat": apre Telegram e fa scegliere la chat. Vuoto = niente pulsante.
+    condividi_url: str = "https://t.me/share/url"
 
 
 @dataclass(frozen=True)
@@ -139,6 +141,7 @@ def load_config(path: Path | str) -> Config:
         dashboard_max_offerte=int(raw.get("dashboard_max_offerte", 10000)),
         dashboard_giorni=None if raw.get("dashboard_giorni") is None else int(raw["dashboard_giorni"]),
         grafico_prezzi=str(raw.get("grafico_prezzi", Params.grafico_prezzi)).strip(),
+        condividi_url=str(raw.get("condividi_url", Params.condividi_url)).strip(),
     )
     if params.dashboard_max_offerte < 1:
         raise ConfigError("parametri: dashboard_max_offerte deve essere almeno 1")

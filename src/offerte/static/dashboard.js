@@ -608,6 +608,19 @@
       msg.rel = "noopener noreferrer nofollow sponsored";
       azioni.appendChild(msg);
     }
+    var daMandare = destinazione || messaggio;
+    if (dati.condividi && daMandare) {
+      // Apre Telegram con il selettore delle chat: nessun token nella pagina, funziona anche su Pages.
+      var invio = urlSicuro(dati.condividi + "?url=" + encodeURIComponent(daMandare) +
+                            "&text=" + encodeURIComponent(testoDaCondividere(o)));
+      if (invio) {
+        var manda = crea("a", "manda", "Mandamelo in chat");
+        manda.href = invio;
+        manda.target = "_blank";
+        manda.rel = "noopener noreferrer";
+        azioni.appendChild(manda);
+      }
+    }
     if (azioni.childNodes.length) { corpo.appendChild(azioni); }
 
     if (o.a && dati.grafico) {
@@ -626,6 +639,14 @@
 
     articolo.appendChild(corpo);
     return articolo;
+  }
+
+  function testoDaCondividere(o) {
+    var parti = [o.n];
+    if (o.p !== undefined && o.p !== null) { parti.push(euro.format(o.p)); }
+    if (o.s !== undefined && o.s !== null) { parti.push("-" + o.s + "%"); }
+    if (o.c) { parti.push("coupon " + o.c); }
+    return parti.join(" \u00b7 ");
   }
 
   function mostraRisultati() {

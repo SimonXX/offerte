@@ -340,3 +340,15 @@ def test_grafico_si_puo_spegnere(tmp_path):
         "parametri: {grafico_prezzi: ''}\ncanali: [{nome: a}]\nregole: [{nome: r, parole: [ssd]}]\n",
         encoding="utf-8")
     assert load_config(tmp_path / "spento.yaml").parametri.grafico_prezzi == ""
+
+
+def test_condividi_nella_testa(tmp_path):
+    """Il link «mandamelo in chat» e' un indirizzo di configurazione, non una stringa nel JavaScript."""
+    config = config_demo(tmp_path)
+    assert config.parametri.condividi_url.endswith("/share/url")
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store, condividi=config.parametri.condividi_url)
+    assert doc["condividi"].endswith("/share/url")
+    with Store(":memory:") as store:
+        doc, _ = doc_da([offerta()], config, store, condividi="")
+    assert "condividi" not in doc

@@ -190,3 +190,11 @@ def test_raccolta_ferma_non_e_ventitre_fonti_rotte():
     assert "var raccoltaFerma = rotte === 0 && ferme > 0 && ferme === attive;" in js
     assert '"Raccolta ferma da "' in js
     assert '", tutte ok)"' in js
+
+
+def test_mandamelo_in_chat_senza_token():
+    """La condivisione passa dal selettore di Telegram: nessun token puo' finire in una pagina pubblica."""
+    js = sorgente("dashboard.js")
+    assert "dati.condividi" in js and "testoDaCondividere" in js
+    for vietato in ("api.telegram.org", "sendMessage", "bot<", "TELEGRAM_BOT_TOKEN"):
+        assert vietato not in js, vietato

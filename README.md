@@ -52,6 +52,7 @@ parametri:
   dashboard_max_offerte: 10000    # tetto delle offerte in dashboard.json; oltre, si tengono le più recenti
   # dashboard_giorni: 60          # finestra della dashboard se deve guardare più indietro dei feed
   # grafico_prezzi: ""            # vuoto = niente grafico dello storico prezzi nelle schede
+  # condividi_url: ""             # vuoto = niente pulsante "mandamelo in chat" nelle schede
 
 canali:
   - {nome: mttvideo,            cartella: informatica}               # MoreThanHardware - Offerte PC, 45,9K iscritti, ~4/g
@@ -369,6 +370,11 @@ Dimensioni misurate il 29.10.2026 su un giro reale di 17 canali: 275 offerte in 
 129 KB compressi, cioè circa 1.010 byte per offerta (buona parte è l'URL dell'immagine, firmato e incomprimibile).
 La proiezione a regime, 5.000-6.500 offerte, è 5-6,5 MB in chiaro e 2,5-3 MB compressi: Pages comprime i `.json`,
 il server locale no.
+
+**Mandarsi un'offerta in chat.** Ogni scheda ha «Mandamelo in chat»: apre Telegram con il selettore delle chat,
+già compilato con nome, prezzo, sconto, coupon e link, e scegli dove mandarlo (il tuo bot, Messaggi salvati, una
+persona). Non c'è nessun token nella pagina, quindi funziona anche sul sito pubblico: è il meccanismo di
+condivisione di Telegram, non un invio fatto dal programma. Si spegne con `condividi_url: ""`.
 
 **Storico dei prezzi, a richiesta.** Ogni scheda di un prodotto Amazon ha un blocco «Storico prezzi» che,
 quando lo apri, mostra il grafico dei dodici mesi dal servizio indicato in `grafico_prezzi` (di default quello
