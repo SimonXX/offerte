@@ -4,7 +4,9 @@ name: offerte
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    # Minuti sfalsati di proposito: GitHub accoda le esecuzioni pianificate e sui runner gratuiti
+    # scarta per prime quelle sui minuti tondi (:00, :15, :30, :45), i piu' congestionati.
+    - cron: "3,18,33,48 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
