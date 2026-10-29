@@ -510,7 +510,8 @@
    "stato": {
     "q": [
      "caffè"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -518,7 +519,8 @@
    "stato": {
     "q": [
      "città"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -526,7 +528,8 @@
    "stato": {
     "q": [
      "c++"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -534,7 +537,8 @@
    "stato": {
     "q": [
      "tb"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -542,7 +546,8 @@
    "stato": {
     "q": [
      "VELOCITÀ"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -550,7 +555,8 @@
    "stato": {
     "q": [
      "/\\bssd\\b/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -558,7 +564,8 @@
    "stato": {
     "q": [
      "/\\d\\s?tb\\b/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -566,7 +573,8 @@
    "stato": {
     "q": [
      "/\\b[12]\\s?tb\\b/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -574,7 +582,8 @@
    "stato": {
     "q": [
      "/\\d{2} per cento/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -582,7 +591,8 @@
    "stato": {
     "q": [
      "/(?P<marca>ssd|nvme)/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -590,7 +600,8 @@
    "stato": {
     "q": [
      "/(?i)ssd/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -598,7 +609,8 @@
    "stato": {
     "q": [
      "/\\ASSD/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -606,7 +618,8 @@
    "stato": {
     "q": [
      "/finale\\Z/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -614,7 +627,8 @@
    "stato": {
     "q": [
      "/\\bcaff[eè]\\b/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -622,7 +636,8 @@
    "stato": {
     "q": [
      "/\\bwatch\\b/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -630,7 +645,8 @@
    "stato": {
     "q": [
      "/l'offerta\\s+del/"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -641,7 +657,8 @@
     ],
     "no": [
      "cinturino"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -650,7 +667,8 @@
     "q": [
      "ssd"
     ],
-    "tutte": true
+    "tutte": true,
+    "pi": true
    }
   },
   {
@@ -660,7 +678,8 @@
      "ssd",
      "nvme"
     ],
-    "tutte": true
+    "tutte": true,
+    "pi": true
    }
   },
   {
@@ -669,7 +688,8 @@
     "q": [
      "ssd"
     ],
-    "pmax": 60.0
+    "pmax": 60.0,
+    "pi": true
    }
   },
   {
@@ -748,7 +768,8 @@
     ],
     "q": [
      "ssd"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -774,7 +795,8 @@
     "q": [
      "no",
      "123"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -784,7 +806,8 @@
      "24x39g, cioccolato",
      "prezzo: shock",
      "#ad"
-    ]
+    ],
+    "pi": true
    }
   },
   {
@@ -991,7 +1014,8 @@
      "ssd"
     ],
     "pmax": 60.0,
-    "smin": 20
+    "smin": 20,
+    "pi": true
    },
    "solo_js": true,
    "togli": "prezzo",
@@ -1005,7 +1029,8 @@
     "q": [
      "/(/",
      "ssd"
-    ]
+    ],
+    "pi": true
    },
    "solo_js": true,
    "attesi": [
@@ -1062,7 +1087,8 @@
     ],
     "q": [
      "ssd"
-    ]
+    ],
+    "pi": true
    },
    "solo_js": true,
    "attesi": [
@@ -1119,6 +1145,59 @@
     39,
     40
    ]
+  },
+  {
+   "nome": "sottostringa-tb-dentro-football",
+   "stato": {
+    "q": [
+     "tb"
+    ]
+   }
+  },
+  {
+   "nome": "sottostringa-watch",
+   "stato": {
+    "q": [
+     "watch"
+    ]
+   }
+  },
+  {
+   "nome": "sottostringa-con-escludi",
+   "stato": {
+    "q": [
+     "ssd"
+    ],
+    "no": [
+     "nvme"
+    ]
+   }
+  },
+  {
+   "nome": "sottostringa-punteggiatura",
+   "stato": {
+    "q": [
+     "c++",
+     "prezzo: shock"
+    ]
+   }
+  },
+  {
+   "nome": "sottostringa-accento",
+   "stato": {
+    "q": [
+     "caffè"
+    ]
+   }
+  },
+  {
+   "nome": "sottostringa-con-regex",
+   "stato": {
+    "q": [
+     "monitor",
+     "/\\bssd\\b/"
+    ]
+   }
   }
  ],
  "url": [
@@ -1171,6 +1250,13 @@
   {
    "per": "30g",
    "ord": "sconto-asc"
+  },
+  {
+   "q": [
+    "ssd"
+   ],
+   "pi": true,
+   "tutte": false
   }
  ],
  "url_invalidi": [
@@ -1234,6 +1320,14 @@
   {
    "search": "per=0g&pmin=1e400",
    "atteso": {}
+  },
+  {
+   "search": "pi=2&q=ssd",
+   "atteso": {
+    "q": [
+     "ssd"
+    ]
+   }
   }
  ],
  "regex": [

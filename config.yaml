@@ -29,12 +29,15 @@ canali:
   - {nome: vereoffertetech,     cartella: informatica}               # Hardware&Offerte, 58,5K, ~15/g (anche video YouTube)
   - {nome: mvofferte,           cartella: informatica}               # MVHardware Offerte, 9,85K, ~4/g
   - {nome: offerten1tech,       cartella: informatica}               # offertenumberone.it, 4,7K, ~15/g
+  - {nome: bombeelettronica,    cartella: informatica}               # Offerte elettronica e informatica (GI), ~27/g
   - {nome: offertetecnomela,    cartella: informatica}               # Offerte e Sconti Mela (Apple), ~12/g
   # casa: errori di prezzo e offerte generaliste
   - {nome: erroridiprezzo,              cartella: casa}              # Errori di Prezzo, ~5/g
   - {nome: erroridiprezzo_offertedalweb, cartella: casa}             # Errore di Prezzo - Offerte Dal Web, ~1/g
   - {nome: mttcasa,                     cartella: casa}              # MoreThanTech - Offerte Casa, 6,94K, ~13/g
   - {nome: offertecasatecno,            cartella: casa}              # Offerte casa, ~34/g
+  - {nome: mio_sconto,          cartella: casa, pagine: 15}          # Mio Sconto, elettrodomestici e casa, ~51/g
+  - {nome: malati_di_risparmio,         cartella: casa}              # Malati Di Risparmio: anteprima quasi vuota, sta migrando su un canale privato
   # cina: AliExpress e simili
   - {nome: mttcina,             cartella: cina}                      # MoreThanTech - Offerte Cina, 15,1K, ~2/g, link s.click.aliexpress.com
   - {nome: tecnocina,           cartella: cina, pagine: 25}          # Offerte e Sconti Cina, ~150/g

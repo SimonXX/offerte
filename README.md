@@ -32,7 +32,7 @@ poi in `./config.yaml`; i percorsi relativi nella config partono dalla cartella 
 
 ## Configurazione
 
-Estratto di `config.yaml`, copiato dal file del repository, che ha 20 canali verificati divisi in
+Estratto di `config.yaml`, copiato dal file del repository, che ha 23 canali verificati divisi in
 `informatica`, `casa`, `cina` e `raffica`:
 
 ```yaml

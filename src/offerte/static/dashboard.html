@@ -38,7 +38,11 @@
       <label for="q">Parole</label>
       <textarea id="q" rows="3" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-describedby="aiuto-q"></textarea>
     </p>
-    <p id="aiuto-q" class="aiuto">Una voce per riga. Una voce fra barre e' una regex, tradotta dalla sintassi di Python: gruppi possessivi, gruppi atomici e le classi negate dentro parentesi quadre non funzionano.</p>
+    <p class="campo campo-casella" id="riga-parola-intera" hidden>
+      <input type="checkbox" id="parola-intera">
+      <label for="parola-intera">Solo parola intera</label>
+    </p>
+    <p id="aiuto-q" class="aiuto">Una voce per riga. Si cerca anche dentro le parole: «citofono» trova «videocitofono». Con «Solo parola intera» no, come fanno le regole in config.yaml. Una voce fra barre e' una regex in sintassi Python: gruppi possessivi, gruppi atomici e le classi negate dentro parentesi quadre non funzionano.</p>
     <p id="errore-q" role="alert" class="errore"></p>
 
     <details id="filtri">

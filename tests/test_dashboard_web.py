@@ -164,3 +164,13 @@ def test_scala_dei_periodi_nel_js():
     assert "SCALA_PERIODI" in js and "finestra_giorni" in js
     gradini = re.findall(r'\{valore: "([0-9]+[hg])"', js)
     assert gradini == ["1h", "3h", "6h", "12h", "24h", "48h", "3g", "7g", "14g", "30g", "60g", "90g"]
+
+
+def test_interruttore_parola_intera():
+    """La ricerca di default e' per sottostringa; la parola intera e' un interruttore, non una sintassi."""
+    js = sorgente("filtri.js")
+    assert "function compilaVoce(voce, parolaIntera)" in js
+    assert "pi: false" in js          # il default dello stato
+    assert "stato.pi = true;" in js   # una regola di config vale come parola intera
+    html = sorgente("dashboard.html")
+    assert '<input type="checkbox" id="parola-intera">' in html

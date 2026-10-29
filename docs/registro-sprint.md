@@ -566,3 +566,71 @@ generica, e in §2.2 per `finestra_giorni`.
 
 `pkill -f "offerte.*serve"` uccide anche la shell che lo esegue, perché il pattern combacia con la propria riga
 di comando. Si usa `pkill -x offerte`.
+
+## S9, ricerca per sottostringa e canali nuovi
+
+Data: 29 ottobre 2026.
+
+### Il difetto
+
+Cercando `citofono` nella dashboard: nessun risultato, mentre nel database c'era «Blink Outdoor 4 con Blink
+**Videocitofono** 2K+». Una voce scritta semplice era cercata come parola intera, perché il motore rispecchiava
+`compile_keyword` di `config.py`. Corretto per le regole, sbagliato per una casella di ricerca: chi scrive
+«citofono» si aspetta «videocitofono». L'unico modo di ottenerlo era scrivere `/citofono/` a mano, cioè
+conoscere una sintassi.
+
+### Cosa è stato fatto
+
+Lo stato guadagna `pi` (parola intera), default **falso**: le voci semplici si cercano come sottostringa.
+L'interruttore «Solo parola intera» sta sotto il campo Parole, fuori dal pannello dei filtri, e compare appena
+scrivi qualcosa. Nell'URL è `pi=1`.
+
+La parità con `rules.matches` è preservata, ed è il punto delicato: con `pi` falso, «Crea regola» esporta le
+voci semplici come regex (`parole: ['/citofono/']`) invece che come parole, così la regola in config seleziona
+esattamente quello che la pagina mostrava. `statoDaRegola` fa il contrario e imposta `pi` a vero, perché le
+parole scritte in `config.yaml` valgono come parola intera.
+
+L'oracolo Python (`tests/riferimento.py`) rispecchia la regola: `compila_voce(voce, parola_intera)` usa
+`compile_keyword` per le regex e per la parola intera, `re.escape` per la sottostringa.
+
+### Canali
+
+Da 17 a 23. Risolti provando gli username e verificando il titolo restituito da `t.me/s/`:
+
+| canale | titolo verificato | volume | cartella |
+|:--|:--|--:|:--|
+| `offertecasatecno` | Offerte casa | ~34/g | casa |
+| `offertetecnomela` | Offerte e Sconti Mela | ~12/g | informatica |
+| `tecnocina` | Offerte e Sconti Cina | ~150/g | cina |
+| `mio_sconto` | Mio Sconto | ~51/g | casa |
+| `bombeelettronica` | Offerte elettronica e informatica | ~27/g | informatica |
+| `malati_di_risparmio` | MALATI DI RISPARMIO | ~5/g | casa |
+
+`malati_di_risparmio` è stato aggiunto su richiesta esplicita, con una riserva scritta nel commento di
+`config.yaml`: l'anteprima pubblica restituisce tre messaggi con la stessa riga generica, e il messaggio fissato
+del canale annuncia il trasferimento su un canale privato (`t.me/+...`), che senza account e senza bot questo
+strumento non può leggere.
+
+Non risolti: «Banca delle Offerte» (provate cinque varianti, nessuna anteprima pubblica).
+
+### Test
+
+305 prima, **305 dopo** più 6 casi di fixture e 2 test nuovi. Tutti i casi esistenti della fixture dichiarano
+ora `pi: true`, così continuano a provare la parola intera invece di dipendere dal default; i sei casi nuovi
+provano la sottostringa (`tb` dentro `football`, `watch` dentro `watchè`, accenti, `c++`, punteggiatura, regex
+mista) con Python come oracolo.
+
+### Comandi di verifica eseguiti
+
+| comando | esito |
+|:--|:--|
+| `uv run pytest -q` | 305 passed in 36,6 s |
+| controllo trattini | nessuna riga |
+| `tb` parola intera contro sottostringa, sui 4 motori | 3 id contro 7, uguali in Python |
+| YAML di una ricerca per sottostringa | `parole: ['/c\+\+/', '/prezzo: shock/']`, caricata da `load_config` |
+
+### Deviazioni
+
+La specifica §3.2 e §3.4 descrivevano `compilaVoce(voce)` con la sola semantica di parola intera, speculare a
+`compile_keyword`. Ora la semantica dipende da `pi` e la specifica va aggiornata in quei due punti: **non ancora
+fatto**, è il primo lavoro del prossimo giro.

@@ -302,3 +302,13 @@ def test_dashboard_giorni_non_valido(tmp_path):
         encoding="utf-8")
     with pytest.raises(ConfigError, match="dashboard_giorni deve essere almeno 1"):
         load_config(tmp_path / "brutta.yaml")
+
+
+def test_aiuto_spiega_la_ricerca_dentro_le_parole():
+    """Il testo sotto il campo deve dire come cerca di default, altrimenti la barretta resta un mistero."""
+    from pathlib import Path
+    import offerte
+    html = (Path(offerte.__file__).parent / "static" / "dashboard.html").read_text(encoding="utf-8")
+    assert 'id="parola-intera"' in html and 'id="riga-parola-intera"' in html
+    aiuto = html.split('id="aiuto-q"', 1)[1].split("</p>", 1)[0]
+    assert "dentro le parole" in aiuto and "Solo parola intera" in aiuto

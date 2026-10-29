@@ -144,9 +144,9 @@ def test_casi_solo_js(motore, casi, risultati):
     assert budget["troppoLento"] is True and 0 < len(budget["ids"]) < 800
 
     togli = ottenuti["togli-prezzo"]
-    assert togli["gruppi"] == ["q", "prezzo", "smin"]
+    assert togli["gruppi"] == ["q", "pi", "prezzo", "smin"]
     assert togli["dopoTogli"]["pmin"] is None and togli["dopoTogli"]["pmax"] is None
-    assert togli["gruppiDopoTogli"] == ["q", "smin"]
+    assert togli["gruppiDopoTogli"] == ["q", "pi", "smin"]
     assert togli["idsDopoTogli"] == [1, 24, 36]
 
     rotta = ottenuti["regex-non-valida"]
@@ -162,7 +162,7 @@ def test_url_andata_e_ritorno(motore, casi, risultati):
     for voce in risultati[motore]["url"]:
         assert voce["uguale"] is True, voce["search"]
     attesi = {c["search"]: c["atteso"] for c in casi["url_invalidi"]}
-    vuoto = {"q": [], "no": [], "tutte": False, "pmin": None, "pmax": None, "smin": None,
+    vuoto = {"q": [], "no": [], "tutte": False, "pi": False, "pmin": None, "pmax": None, "smin": None,
              "cart": [], "can": [], "per": None, "cp": False, "ord": "data-desc"}
     for voce in risultati[motore]["url_invalidi"]:
         assert voce["stato"] == {**vuoto, **attesi[voce["search"]]}, voce["search"]

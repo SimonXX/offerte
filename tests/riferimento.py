@@ -37,10 +37,18 @@ def canali_dello_stato(stato: dict, cartelle: dict) -> frozenset[str]:
     return frozenset(nomi)
 
 
+def compila_voce(voce: str, parola_intera: bool):
+    """Stessa regola di filtri.js: /regex/ sempre, parola intera solo se richiesto, altrimenti sottostringa."""
+    if parola_intera or (len(voce) > 2 and voce.startswith("/") and voce.endswith("/")):
+        return compile_keyword(voce)
+    return re.compile(re.escape(voce), re.IGNORECASE)
+
+
 def regola_dello_stato(stato: dict, cartelle: dict) -> Rule:
+    intera = bool(stato.get("pi", False))
     return Rule(nome="caso",
-                parole=tuple(compile_keyword(p) for p in stato.get("q", [])),
-                escludi=tuple(compile_keyword(p) for p in stato.get("no", [])),
+                parole=tuple(compila_voce(p, intera) for p in stato.get("q", [])),
+                escludi=tuple(compila_voce(p, intera) for p in stato.get("no", [])),
                 tutte=bool(stato.get("tutte", False)),
                 prezzo_min=stato.get("pmin"), prezzo_max=stato.get("pmax"),
                 sconto_min=stato.get("smin"), solo_coupon=bool(stato.get("cp", False)),

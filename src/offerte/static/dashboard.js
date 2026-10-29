@@ -16,6 +16,8 @@
     no: document.getElementById("no"),
     tutte: document.getElementById("tutte"),
     rigaTutte: document.getElementById("riga-tutte"),
+    parolaIntera: document.getElementById("parola-intera"),
+    rigaParolaIntera: document.getElementById("riga-parola-intera"),
     pmin: document.getElementById("pmin"),
     pmax: document.getElementById("pmax"),
     smin: document.getElementById("smin"),
@@ -413,6 +415,7 @@
     DOM.q.value = stato.q.join("\n");
     DOM.no.value = stato.no.join("\n");
     DOM.tutte.checked = stato.tutte;
+    DOM.parolaIntera.checked = stato.pi;
     DOM.pmin.value = stato.pmin === null ? "" : String(stato.pmin);
     DOM.pmax.value = stato.pmax === null ? "" : String(stato.pmax);
     DOM.smin.value = stato.smin === null ? "" : String(stato.smin);
@@ -432,6 +435,7 @@
     s.q = righeDi(DOM.q.value);
     s.no = righeDi(DOM.no.value);
     s.tutte = DOM.tutte.checked;
+    s.pi = DOM.parolaIntera.checked;
     s.pmin = numeroCampo(DOM.pmin.value);
     s.pmax = numeroCampo(DOM.pmax.value);
     s.smin = interoCampo(DOM.smin.value);
@@ -491,6 +495,7 @@
     var attivi = F.gruppiAttivi(stato).filter(function (g) { return g !== "q"; });
     DOM.filtriTitolo.textContent = "Filtri (" + attivi.length + ")";
     DOM.rigaTutte.hidden = stato.q.length < 2;
+    DOM.rigaParolaIntera.hidden = stato.q.length === 0 && stato.no.length === 0;
     DOM.scorciatoiePrezzo.querySelectorAll("button").forEach(function (b) {
       var valore = Number(b.getAttribute("data-pmax"));
       b.setAttribute("aria-pressed", stato.pmax === valore ? "true" : "false");
@@ -630,7 +635,8 @@
   }
 
   var ETICHETTE = {
-    q: "Parole", no: "Escludi", tutte: "Tutte le parole", prezzo: "Prezzo", smin: "Sconto minimo",
+    q: "Parole", no: "Escludi", tutte: "Tutte le parole", pi: "Solo parola intera",
+    prezzo: "Prezzo", smin: "Sconto minimo",
     cart: "Cartella", can: "Canali", per: "Periodo", cp: "Solo coupon"
   };
 
@@ -813,7 +819,7 @@
     [DOM.q, DOM.no, DOM.pmin, DOM.pmax, DOM.smin].forEach(function (c) {
       c.addEventListener("input", conRitardo);
     });
-    [DOM.tutte, DOM.cp, DOM.per, DOM.ord].forEach(function (c) {
+    [DOM.tutte, DOM.parolaIntera, DOM.cp, DOM.per, DOM.ord].forEach(function (c) {
       c.addEventListener("change", dalleControlli);
     });
     [DOM.cart, DOM.can].forEach(function (c) {

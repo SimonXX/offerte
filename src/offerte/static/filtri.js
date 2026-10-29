@@ -8,7 +8,7 @@
   // Un periodo è <numero>h oppure <numero>g: la scala del menu dipende dalla finestra dei dati,
   // quindi non può stare in una tabella fissa.
   var PERIODO_RE = /^([1-9][0-9]{0,2})(h|g)$/;
-  var GRUPPI = ["q", "no", "tutte", "prezzo", "smin", "cart", "can", "per", "cp"];
+  var GRUPPI = ["q", "no", "tutte", "pi", "prezzo", "smin", "cart", "can", "per", "cp"];
   var RISERVATE_YAML = ["y", "n", "yes", "no", "on", "off", "true", "false", "null"];
 
   // Classe di "carattere di parola" alla Python: \w con le regole Unicode.
@@ -27,7 +27,7 @@
   }
 
   function statoDefault() {
-    return {q: [], no: [], tutte: false, pmin: null, pmax: null, smin: null,
+    return {q: [], no: [], tutte: false, pi: false, pmin: null, pmax: null, smin: null,
             cart: [], can: [], per: null, cp: false, ord: "data-desc"};
   }
 
@@ -176,15 +176,18 @@
     }
   }
 
-  function compilaVoce(voce) {
+  function compilaVoce(voce, parolaIntera) {
     var s = String(voce);
     if (eRegex(s)) {
       return compilaRegex(s.slice(1, -1));
     }
+    // Senza "solo parola intera" la voce si cerca dentro le parole, come in una casella di ricerca:
+    // chi scrive "citofono" si aspetta di trovare anche "videocitofono".
+    var sorgente = parolaIntera
+      ? "(?:^|" + NON_PAROLA + ")" + proteggi(s) + "(?!" + PAROLA + ")"
+      : proteggi(s);
     try {
-      return {ok: true, tipo: "parola",
-              re: new RegExp("(?:^|" + NON_PAROLA + ")" + proteggi(s) + "(?!" + PAROLA + ")", "iu"),
-              avvisi: []};
+      return {ok: true, tipo: "parola", re: new RegExp(sorgente, "iu"), avvisi: []};
     } catch (e) {
       return {ok: false, errore: String((e && e.message) || e)};
     }
@@ -196,7 +199,7 @@
     var fuori = {q: [], no: []};
     ["q", "no"].forEach(function (campo) {
       (stato[campo] || []).forEach(function (voce, indice) {
-        var c = compilaVoce(voce);
+        var c = compilaVoce(voce, !!stato.pi);
         if (!c.ok) {
           errori.push({campo: campo, riga: indice + 1, messaggio: c.errore});
           return;
@@ -335,6 +338,7 @@
     if (stato.q.length) { out.push("q"); }
     if (stato.no.length) { out.push("no"); }
     if (stato.tutte && stato.q.length >= 2) { out.push("tutte"); }
+    if (stato.pi && (stato.q.length || stato.no.length)) { out.push("pi"); }
     if (stato.pmin !== null || stato.pmax !== null) { out.push("prezzo"); }
     if (stato.smin !== null) { out.push("smin"); }
     if (stato.cart.length) { out.push("cart"); }
@@ -345,7 +349,8 @@
   }
 
   function copiaStato(stato) {
-    return {q: stato.q.slice(), no: stato.no.slice(), tutte: stato.tutte, pmin: stato.pmin, pmax: stato.pmax,
+    return {q: stato.q.slice(), no: stato.no.slice(), tutte: stato.tutte, pi: stato.pi,
+            pmin: stato.pmin, pmax: stato.pmax,
             smin: stato.smin, cart: stato.cart.slice(), can: stato.can.slice(), per: stato.per,
             cp: stato.cp, ord: stato.ord};
   }
@@ -355,6 +360,7 @@
     if (gruppo === "q") { s.q = []; s.tutte = false; }
     if (gruppo === "no") { s.no = []; }
     if (gruppo === "tutte") { s.tutte = false; }
+    if (gruppo === "pi") { s.pi = false; }
     if (gruppo === "prezzo") { s.pmin = null; s.pmax = null; }
     if (gruppo === "smin") { s.smin = null; }
     if (gruppo === "cart") { s.cart = []; }
@@ -411,6 +417,8 @@
         stato.tutte = valore === "1";
       } else if (chiave === "cp") {
         stato.cp = valore === "1";
+      } else if (chiave === "pi") {
+        stato.pi = valore === "1";
       } else if (chiave === "pmin" || chiave === "pmax") {
         stato[chiave] = numeroValido(valore);
       } else if (chiave === "smin") {
@@ -440,6 +448,7 @@
     stato.q.forEach(function (v) { parti.push("q=" + encodeURIComponent(v)); });
     stato.no.forEach(function (v) { parti.push("no=" + encodeURIComponent(v)); });
     if (stato.tutte) { parti.push("tutte=1"); }
+    if (stato.pi) { parti.push("pi=1"); }
     if (stato.pmin !== null) { parti.push("pmin=" + String(stato.pmin)); }
     if (stato.pmax !== null) { parti.push("pmax=" + String(stato.pmax)); }
     if (stato.smin !== null) { parti.push("smin=" + String(stato.smin)); }
@@ -462,6 +471,7 @@
     stato.q = (regola.parole || []).slice();
     stato.no = (regola.escludi || []).slice();
     stato.tutte = !!regola.tutte;
+    stato.pi = true;  // le parole di una regola in config valgono come parola intera
     stato.pmin = numeroValido(regola.prezzo_min);
     stato.pmax = numeroValido(regola.prezzo_max);
     stato.smin = interoValido(regola.sconto_min);
@@ -498,7 +508,7 @@
     if (stato.per !== null) { return false; }
     var altro = statoDaRegola(regola, cartelle);
     if (!listeUguali(stato.q, altro.q) || !listeUguali(stato.no, altro.no)) { return false; }
-    if (stato.tutte !== altro.tutte || stato.cp !== altro.cp) { return false; }
+    if (stato.tutte !== altro.tutte || stato.cp !== altro.cp || !stato.pi !== !altro.pi) { return false; }
     if (stato.pmin !== altro.pmin || stato.pmax !== altro.pmax || stato.smin !== altro.smin) { return false; }
     return insiemiUguali(insiemeCanali(stato, cartelle), insiemeCanali(altro, cartelle));
   }
@@ -517,12 +527,15 @@
     return base;
   }
 
-  function voceYaml(v) {
+  function voceYaml(v, parolaIntera) {
     var s = String(v);
-    if (eRegex(s)) {
-      return "'" + s.replace(/'/g, "''") + "'";
+    if (!eRegex(s) && parolaIntera) {
+      return JSON.stringify(s);
     }
-    return JSON.stringify(s);
+    // Senza parola intera la voce diventa una regex, così la regola in config seleziona
+    // esattamente quello che la pagina stava mostrando.
+    var corpo = eRegex(s) ? s : "/" + proteggi(s) + "/";
+    return "'" + corpo.replace(/'/g, "''") + "'";
   }
 
   function nomeYaml(n) {
@@ -574,11 +587,12 @@
       return null;
     }
     var righe = ["  - nome: " + nomeYaml(opzioni.nome || nomeSuggerito(stato))];
+    var scrivi = function (v) { return voceYaml(v, !!stato.pi); };
     if (stato.q.length) {
-      righe.push("    parole: [" + stato.q.map(voceYaml).join(", ") + "]");
+      righe.push("    parole: [" + stato.q.map(scrivi).join(", ") + "]");
     }
     if (stato.no.length) {
-      righe.push("    escludi: [" + stato.no.map(voceYaml).join(", ") + "]");
+      righe.push("    escludi: [" + stato.no.map(scrivi).join(", ") + "]");
     }
     if (stato.pmin !== null) { righe.push("    prezzo_min: " + String(stato.pmin)); }
     if (stato.pmax !== null) { righe.push("    prezzo_max: " + String(stato.pmax)); }
